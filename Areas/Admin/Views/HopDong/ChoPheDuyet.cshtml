@@ -57,16 +57,56 @@
                                         <i class="bi bi-check-lg"></i> Duyệt
                                     </button>
                                 </form>
-                                <form asp-action="TuChoi" method="post" asp-route-id="@hd.MaHopDong" class="d-inline"
-                                      onsubmit="return confirm('Bạn có chắc chắn muốn PHÊ DUYỆT hợp đồng này không?');">
-                                    @Html.AntiForgeryToken()
-                                    <button type="submit" class="btn btn-success btn-sm">
-                                        <i class="bi bi-x-lg"></i> Từ chối
-                                    </button>
-                                </form>
+                               
                                 <!-- Nút Từ chối (sẽ mở Modal) -->
                             </td>
                         </tr>
+                    <td class="text-center">
+                        <!-- Nút Duyệt (Để tham khảo) -->
+                        <form asp-action="PheDuyet" method="post" asp-route-id="@hd.MaHopDong" class="d-inline"
+                              onsubmit="return confirm('Bạn có chắc chắn muốn PHÊ DUYỆT hợp đồng này không?');">
+                                @Html.AntiForgeryToken()
+                            <button type="submit" class="btn btn-success btn-sm">
+                                <i class="bi bi-check-lg"></i> Duyệt
+                            </button>
+                        </form>
+
+                        <!-- Nút Từ chối (sẽ mở Modal) -->
+                        <button type="button" class="btn btn-danger btn-sm" data-bs-toggle="modal" data-bs-target="#tuChoiModal-@hd.MaHopDong">
+                            <i class="bi bi-x-lg"></i> Từ chối
+                        </button>
+                    </td>
+
+                    <!-- ======================================================= -->
+                    <!-- MODAL ĐỂ NHẬP LÝ DO TỪ CHỐI (cho mỗi hợp đồng) -->
+                    <!-- (Đặt đoạn code này ở cuối file View) -->
+                    <!-- ======================================================= -->
+                    <div class="modal fade" id="tuChoiModal-@hd.MaHopDong" tabindex="-1" aria-labelledby="modalLabel-@hd.MaHopDong" aria-hidden="true">
+                        <div class="modal-dialog">
+                            <div class="modal-content">
+                                <!-- Form này sẽ được gửi đi khi bấm "Xác nhận Từ chối" -->
+                                <form asp-action="TuChoi" method="post" asp-route-id="@hd.MaHopDong">
+                                        @Html.AntiForgeryToken()
+                                    <div class="modal-header">
+                                        <h5 class="modal-title" id="modalLabel-@hd.MaHopDong">Lý do từ chối Hợp đồng #@hd.MaHopDong</h5>
+                                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                    </div>
+                                    <div class="modal-body">
+                                        <div class="mb-3">
+                                            <label for="lyDo-@hd.MaHopDong" class="form-label">Vui lòng nhập lý do từ chối:</label>
+                                            <!-- Ô nhập liệu cho lý do, có thuộc tính name="lyDo" để Controller có thể nhận được -->
+                                            <textarea id="lyDo-@hd.MaHopDong" name="lyDo" class="form-control" rows="3" required></textarea>
+                                        </div>
+                                    </div>
+                                    <div class="modal-footer">
+                                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
+                                        <button type="submit" class="btn btn-danger">Xác nhận Từ chối</button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+
                     }
                 </tbody>
             </table>
@@ -74,32 +114,3 @@
     </div>
 </div>
 
-<!-- ======================================================= -->
-<!-- MODAL ĐỂ NHẬP LÝ DO TỪ CHỐI (cho mỗi hợp đồng) -->
-<!-- ======================================================= -->
-@foreach (var hd in Model)
-{
-    <div class="modal fade" id="tuChoiModal-@hd.MaHopDong" tabindex="-1" aria-labelledby="modalLabel-@hd.MaHopDong" aria-hidden="true">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <form asp-action="TuChoi" method="post" asp-route-id="@hd.MaHopDong">
-                    @Html.AntiForgeryToken()
-                    <div class="modal-header">
-                        <h5 class="modal-title" id="modalLabel-@hd.MaHopDong">Lý do từ chối Hợp đồng #@hd.MaHopDong</h5>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                    </div>
-                    <div class="modal-body">
-                        <div class="mb-3">
-                            <label for="lyDo-@hd.MaHopDong" class="form-label">Vui lòng nhập lý do từ chối:</label>
-                            <textarea id="lyDo-@hd.MaHopDong" name="lyDo" class="form-control" rows="3" required></textarea>
-                        </div>
-                    </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
-                        <button type="submit" class="btn btn-danger">Xác nhận Từ chối</button>
-                    </div>
-                </form>
-            </div>
-        </div>
-    </div>
-}

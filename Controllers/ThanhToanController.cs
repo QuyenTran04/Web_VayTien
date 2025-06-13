@@ -15,13 +15,23 @@ namespace VAYTIEN.Controllers
         private readonly MoMoService _momoService;
         private readonly VnpayService _vnpayService;
         private readonly IConfiguration _configuration;
+        private readonly PdfGenerator _pdfGenerator;
+        private readonly EmailSender _emailSender;
 
-        public ThanhToanController(QlvayTienContext context, MoMoService momoService, VnpayService vnpayService, IConfiguration configuration)
+        public ThanhToanController(
+            QlvayTienContext context,
+            MoMoService momoService,
+            VnpayService vnpayService,
+            IConfiguration configuration,
+            PdfGenerator pdfGenerator,
+            EmailSender emailSender)
         {
             _context = context;
             _momoService = momoService;
             _vnpayService = vnpayService;
             _configuration = configuration;
+            _pdfGenerator = pdfGenerator;
+            _emailSender = emailSender;
         }
 
         // GET: /ThanhToan/ChiTiet?maHopDong=...&kyHanThu=...
@@ -179,7 +189,7 @@ namespace VAYTIEN.Controllers
                 int kyHan = int.Parse(ids[1]);
 
                 var lichTra = await _context.LichTraNos
-                    .Include(l => l.MaHopDongNavigation)
+                    .Include(l => l.MaHopDongNavigation.MaKhNavigation)
                     .FirstOrDefaultAsync(x => x.MaHopDong == maHopDong && x.KyHanThu == kyHan);
 
                 if (lichTra == null || lichTra.TrangThai == "Đã trả")
@@ -190,7 +200,6 @@ namespace VAYTIEN.Controllers
 
                 var companyAccount = await _context.TaiKhoanNganHangs.FirstOrDefaultAsync(tk => tk.SoTaiKhoan == _configuration["AppSettings:CompanyBankAccountNumber"]);
                 var customerAccount = await _context.TaiKhoanNganHangs.FirstOrDefaultAsync(tk => tk.MaKh == lichTra.MaHopDongNavigation.MaKh);
-
                 if (companyAccount == null || customerAccount == null)
                 {
                     await dbTransaction.RollbackAsync();
@@ -233,14 +242,22 @@ namespace VAYTIEN.Controllers
                 }
 
                 // 5. Ghi nhận 2 giao dịch
-                var debitTransaction = new GiaoDich { MaTaiKhoan = customerAccount.MaTaiKhoan, NgayGd = homNay, SoTienGd = -totalPayment, LoaiGd = "Thanh toán nợ", NoiDungGd = $"Thanh toán HĐ #{maHopDong}, kỳ {kyHan}" };
-                _context.GiaoDiches.Add(debitTransaction);
-
-                var creditTransaction = new GiaoDich { MaTaiKhoan = companyAccount.MaTaiKhoan, NgayGd = homNay, SoTienGd = totalPayment, LoaiGd = "Thu nợ", NoiDungGd = $"Nhận thanh toán HĐ #{maHopDong}, kỳ {kyHan}" };
-                _context.GiaoDiches.Add(creditTransaction);
+                _context.GiaoDiches.Add(new GiaoDich { MaTaiKhoan = customerAccount.MaTaiKhoan, NgayGd = homNay, SoTienGd = -totalPayment, LoaiGd = "Thanh toán nợ", NoiDungGd = $"Thanh toán HĐ #{maHopDong}, kỳ {kyHan}" });
+                _context.GiaoDiches.Add(new GiaoDich { MaTaiKhoan = companyAccount.MaTaiKhoan, NgayGd = homNay, SoTienGd = totalPayment, LoaiGd = "Thu nợ", NoiDungGd = $"Nhận thanh toán HĐ #{maHopDong}, kỳ {kyHan}" });
 
                 await _context.SaveChangesAsync();
                 await dbTransaction.CommitAsync();
+
+                // 6. Gửi hóa đơn sau khi transaction thành công
+                try
+                {
+                    var khachHang = lichTra.MaHopDongNavigation.MaKhNavigation;
+                    var receiptPath = _pdfGenerator.GeneratePaymentReceiptPdf(lichTra);
+                    var emailBody = $"<p>Kính gửi Quý khách <strong>{khachHang.HoTen}</strong>,</p><p>Ngân hàng VAYTIEN xác nhận đã nhận thanh toán thành công cho kỳ hạn #{lichTra.KyHanThu} của Hợp đồng #{lichTra.MaHopDong}.</p><p>Vui lòng xem chi tiết trong hóa đơn điện tử đính kèm.</p>";
+                    await _emailSender.SendEmailAsync(khachHang.Email, $"Hóa đơn thanh toán cho Hợp đồng #{lichTra.MaHopDong}", emailBody, receiptPath);
+                }
+                catch { } // Bỏ qua lỗi gửi mail để không ảnh hưởng đến giao dịch
+
                 return true;
             }
             catch

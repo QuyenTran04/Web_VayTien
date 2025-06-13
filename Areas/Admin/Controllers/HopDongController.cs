@@ -161,25 +161,49 @@ namespace VAYTIEN.Areas.Admin.Controllers
             return RedirectToAction(nameof(ChoPheDuyet));
         }
 
-        // Action Từ chối
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> TuChoi(int id, string lyDo)
+        public async Task<IActionResult> TuChoi(int id, string lyDo) // Nhận thêm tham số "lyDo" từ form trong Modal
         {
-            var hd = await _context.HopDongVays.Include(h => h.MaKhNavigation).FirstOrDefaultAsync(h => h.MaHopDong == id);
+            // Lấy thông tin hợp đồng, phải Include() cả KhachHang để có Email và Tên
+            var hd = await _context.HopDongVays
+                                .Include(h => h.MaKhNavigation)
+                                .FirstOrDefaultAsync(h => h.MaHopDong == id);
+
             if (hd == null || hd.TinhTrang != "Chờ phê duyệt")
             {
-                TempData["Error"] = "Hợp đồng không hợp lệ.";
+                TempData["Error"] = "Hợp đồng không hợp lệ hoặc đã được xử lý.";
                 return RedirectToAction(nameof(ChoPheDuyet));
             }
+
+            // 1. Cập nhật trạng thái hợp đồng
             hd.TinhTrang = "Đã từ chối";
+            // Bạn có thể thêm một cột GhiChu vào HopDongVay để lưu lý do nếu muốn
+            // hd.GhiChu = lyDo; 
             _context.Update(hd);
             await _context.SaveChangesAsync();
-            var emailBody = $"<p>Kính gửi Quý khách <strong>{hd.MaKhNavigation.HoTen}</strong>,</p>" +
-                            "<p>Chúng tôi rất tiếc phải thông báo yêu cầu vay của Quý khách đã không được phê duyệt.</p>" +
-                            $"<p>Lý do: {lyDo}</p>";
-            await _emailSender.SendEmailAsync(hd.MaKhNavigation.Email!, "Thông báo Kết quả Yêu cầu Vay vốn", emailBody);
-            TempData["Success"] = $"Đã từ chối hợp đồng #{id}.";
+
+            // 2. Soạn nội dung và gửi email thông báo từ chối
+            var emailBody = $@"
+        <p>Kính gửi Quý khách <strong>{hd.MaKhNavigation.HoTen}</strong>,</p>
+        <p>Chúng tôi rất tiếc phải thông báo yêu cầu vay vốn của Quý khách (Hợp đồng #{hd.MaHopDong}) đã không được phê duyệt.</p>
+        <p><strong>Lý do:</strong> {lyDo}</p>
+        <p>Nếu có bất kỳ thắc mắc nào, vui lòng liên hệ với chi nhánh gần nhất để được hỗ trợ.</p>
+        <br/>
+        <p>Trân trọng,</p>
+        <p><strong>Ngân hàng VAYTIEN</strong></p>";
+
+            try
+            {
+                await _emailSender.SendEmailAsync(hd.MaKhNavigation.Email!, "Thông báo về Kết quả Yêu cầu Vay vốn", emailBody);
+                TempData["Success"] = $"Đã từ chối hợp đồng #{id} và gửi email thông báo thành công.";
+            }
+            catch (Exception ex)
+            {
+                // Ghi log lỗi gửi mail nếu cần, nhưng vẫn báo thành công việc từ chối
+                TempData["Warning"] = $"Đã từ chối hợp đồng #{id}, nhưng có lỗi xảy ra khi gửi email: " + ex.Message;
+            }
+
             return RedirectToAction(nameof(ChoPheDuyet));
         }
 

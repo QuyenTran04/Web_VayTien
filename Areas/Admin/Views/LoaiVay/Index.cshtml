@@ -1,4 +1,4 @@
-﻿@model IEnumerable<VAYTIEN.Models.LoaiVay>
+@model IEnumerable<VAYTIEN.Models.LoaiVay>
 
 @{
     ViewData["Title"] = "Quản lý Sản phẩm Vay";
@@ -37,7 +37,7 @@
                 <!-- ============================================= -->
                 <!-- FORM IMPORT TỪ FILE EXCEL -->
                 <!-- ============================================= -->
-                <form asp-action="ImportFromExcel" method="post" enctype="multipart/form-data" class="d-flex gap-2">
+                <form asp-action="ImportExcel" method="post" enctype="multipart/form-data" class="d-flex gap-2">
                     @Html.AntiForgeryToken()
                     <input type="file" name="excelFile" class="form-control form-control-sm" required accept=".xlsx, .xls" />
                     <button type="submit" class="btn btn-outline-success btn-sm flex-shrink-0" title="Tải lên file Excel">

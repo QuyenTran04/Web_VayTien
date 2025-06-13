@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using VAYTIEN.Models;
@@ -6,6 +6,9 @@ using System.Linq;
 using System.Threading.Tasks;
 using System.Collections.Generic; // Added for List<T>
 using System; // Added for Exception (if still needed for other errors)
+using OfficeOpenXml;
+using System.ComponentModel;
+using LicenseContext = OfficeOpenXml.LicenseContext;
 
 namespace VAYTIEN.Areas.Admin.Controllers
 {
@@ -120,6 +123,56 @@ namespace VAYTIEN.Areas.Admin.Controllers
             catch (DbUpdateException)
             {
                 TempData["Error"] = "Không thể xóa loại vay này vì đang được sử dụng trong các hợp đồng.";
+            }
+
+            return RedirectToAction(nameof(Index));
+        }
+        [HttpPost]
+        [Authorize(Roles = "Admin,NhanVien")]
+        public async Task<IActionResult> ImportExcel(IFormFile excelFile)
+        {
+            if (excelFile != null && excelFile.Length > 0)
+            {
+                ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
+
+                using var stream = new MemoryStream();
+                await excelFile.CopyToAsync(stream);
+
+                using var package = new OfficeOpenXml.ExcelPackage(stream);
+                var worksheet = package.Workbook.Worksheets.FirstOrDefault();
+                if (worksheet == null)
+                {
+                    TempData["Error"] = "Không tìm thấy dữ liệu trong file Excel.";
+                    return RedirectToAction(nameof(Index));
+                }
+
+                var rowCount = worksheet.Dimension.Rows;
+                for (int row = 2; row <= rowCount; row++) // Bỏ qua header
+                {
+                    var ten = worksheet.Cells[row, 1].Text?.Trim();
+                    var laiSuat = decimal.TryParse(worksheet.Cells[row, 2].Text, out var ls) ? ls : 0;
+                    var kyHan = int.TryParse(worksheet.Cells[row, 3].Text, out var kh) ? kh : 0;
+                    var ghiChu = worksheet.Cells[row, 4].Text?.Trim();
+
+                    if (!string.IsNullOrEmpty(ten))
+                    {
+                        var loaiVay = new LoaiVay
+                        {
+                            TenLoaiVay = ten,
+                            LaiSuat = laiSuat,
+                            KyHan = kyHan,
+                            GhiChu = ghiChu
+                        };
+                        _context.LoaiVays.Add(loaiVay);
+                    }
+                }
+
+                await _context.SaveChangesAsync();
+                TempData["Success"] = "Nhập dữ liệu từ Excel thành công!";
+            }
+            else
+            {
+                TempData["Error"] = "Vui lòng chọn file Excel hợp lệ.";
             }
 
             return RedirectToAction(nameof(Index));

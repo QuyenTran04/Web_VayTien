@@ -2,6 +2,7 @@
 using QuestPDF.Helpers;
 using QuestPDF.Infrastructure;
 using VAYTIEN.Models;
+using VAYTIEN.Services;
 using System;
 using System.IO;
 
@@ -53,7 +54,7 @@ public class PdfGenerator
                         AddText("Bên Cho Vay: Ngân Hàng SacomBank Chi Nhánh Ngãi Giao……………………………………………………….");
                         AddText("Địa chỉ trụ sở : 309A Hùng Vương, Thị trấn Ngãi Giao, Huyện Châu Đức, Tỉnh Bà Rịa-Vũng Tàu..");
                         AddText("Điện thoại: 1800 5858 88 - Fax: (028) 3932 1048");
-                        AddText("Đại diện : Ông/Bà: Cao Thanh Lâm- Chức vụ:Quản Lý");   
+                        AddText("Đại diện : Ông/Bà: Cao Thanh Lâm- Chức vụ:Quản Lý");
                         AddText("Sau đây gọi là Bên Ngân hàng,");
 
                         col.Item().Height(5);
@@ -62,7 +63,6 @@ public class PdfGenerator
                         AddText($"Địa chỉ hiện tại : {kh?.DiaChi}");
                         AddText($"Giấy CMND : Ông {kh?.HoTen} mang Giấy CMND số {kh?.CmndCccd} do Công an : Cục Cảnh Sát Bà Rịa Vũng Tàu cấp ngày 28/05/2021");
                         AddText($"Điện thoại nhà riêng: {kh?.Sdt} – Điện thoại di động: {kh?.Sdt}");
-
                         AddText("Email (nếu có): quyentran2909a@gmail.com");
 
                         col.Item().Height(10);
@@ -136,5 +136,109 @@ public class PdfGenerator
         }
     }
 
+    public string GeneratePaymentReceiptPdf(LichTraNo lichTra)
+    {
+        QuestPDF.Settings.License = LicenseType.Community;
 
+        var folderPath = Path.Combine("wwwroot", "receipts");
+        Directory.CreateDirectory(folderPath);
+
+        var fileName = $"hoadon_{lichTra.MaHopDong}_{lichTra.KyHanThu}_{Guid.NewGuid().ToString().Substring(0, 8)}.pdf";
+        var filePath = Path.Combine(folderPath, fileName);
+
+        var khachHang = lichTra.MaHopDongNavigation?.MaKhNavigation;
+        var hopDong = lichTra.MaHopDongNavigation;
+
+        Document.Create(container =>
+        {
+            container.Page(page =>
+            {
+                page.Margin(40);
+                page.DefaultTextStyle(x => x.FontFamily(Fonts.Calibri).FontSize(11));
+
+                page.Header().Row(row =>
+                {
+                    row.RelativeItem().Column(col =>
+                    {
+                        col.Item().Text("Ngân hàng VAYTIEN").Bold().FontSize(16);
+                        col.Item().Text("Địa chỉ: 123 Đường ABC, Quận 1, TP. HCM");
+                        col.Item().Text("Website: www.vaytien.com");
+                    });
+
+                    row.ConstantItem(150).Text("HÓA ĐƠN THANH TOÁN").Bold().FontSize(18).FontColor("#0d6efd").AlignCenter();
+                });
+
+                page.Content().PaddingVertical(20).Column(col =>
+                {
+                    col.Item().LineHorizontal(1).LineColor("#dee2e6");
+                    col.Spacing(20);
+
+                    col.Item().Row(row =>
+                    {
+                        row.RelativeColumn().Column(column =>
+                        {
+                            column.Item().Text(txt =>
+                            {
+                                txt.Span("Mã hóa đơn: ").SemiBold();
+                                txt.Span($"HD{lichTra.MaLich:D6}");
+                            });
+                            column.Item().Text(txt =>
+                            {
+                                txt.Span("Ngày thanh toán: ").SemiBold();
+                                txt.Span($"{lichTra.NgayTra:dd/MM/yyyy}");
+                            });
+                        });
+
+                        row.RelativeColumn().Column(column =>
+                        {
+                            column.Item().Text("THÔNG TIN KHÁCH HÀNG").Bold().FontColor("#6c757d");
+                            column.Item().Text(khachHang?.HoTen);
+                            column.Item().Text(khachHang?.Email);
+                        });
+                    });
+                    col.Spacing(30);
+
+                    col.Item().Table(table =>
+                    {
+                        table.ColumnsDefinition(columns =>
+                        {
+                            columns.RelativeColumn(4);
+                            columns.RelativeColumn(2);
+                        });
+
+                        table.Header(header =>
+                        {
+                            header.Cell().Background("#f8f9fa").Padding(5).Text("Nội dung thanh toán").Bold();
+                            header.Cell().Background("#f8f9fa").Padding(5).Text("Số tiền").Bold().AlignRight();
+                        });
+
+                        table.Cell().Padding(5).Text($"Thanh toán cho Hợp đồng #{lichTra.MaHopDong}, Kỳ hạn #{lichTra.KyHanThu}");
+                        table.Cell().Padding(5).Text($"{lichTra.SoTienPhaiTra:N0} VNĐ").AlignRight();
+
+                        if (lichTra.SoTienPhat > 0)
+                        {
+                            table.Cell().Padding(5).Text("Phí phạt trả chậm");
+                            table.Cell().Padding(5).Text($"+ {lichTra.SoTienPhat:N0} VNĐ").AlignRight().FontColor("#dc3545");
+                        }
+
+                        table.Cell().BorderTop(1).Padding(5).Text("TỔNG CỘNG").Bold().FontSize(12);
+                        table.Cell().BorderTop(1).Padding(5).Text($"{((lichTra.SoTienPhaiTra ?? 0) + (lichTra.SoTienPhat ?? 0)):N0} VNĐ").AlignRight().Bold().FontSize(12);
+                    });
+
+                    col.Spacing(40);
+                    col.Item().Text("Xác nhận thanh toán thành công. Cảm ơn Quý khách đã sử dụng dịch vụ!").AlignCenter();
+                });
+
+                page.Footer().AlignCenter().Text(text =>
+                {
+                    text.Span("Trang ");
+                    text.CurrentPageNumber();
+                    text.Span(" / ");
+                    text.TotalPages();
+                });
+            });
+        }).GeneratePdf(filePath);
+
+        return filePath;
+    }
 }
