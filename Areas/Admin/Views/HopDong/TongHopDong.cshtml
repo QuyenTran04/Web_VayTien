@@ -1,65 +1,90 @@
 ﻿@model List<VAYTIEN.Models.HopDongVay>
 
 @{
-    ViewData["Title"] = "Tổng hợp hợp đồng vay";
+    ViewData["Title"] = "Tổng hợp Hợp đồng Vay";
     Layout = "~/Areas/Admin/Views/Shared/_Layout.cshtml";
 }
 
-<div class="container my-4">
-    <h2 class="text-center mb-4 text-primary fw-bold">@ViewData["Title"]</h2>
-
-    <div class="table-responsive shadow-sm rounded">
-        <table class="table table-hover table-bordered align-middle">
-            <thead class="table-primary text-center">
-                <tr>
-                    <th>#</th>
-                    <th>Khách hàng</th>
-                    <th>Loại vay</th>
-                    <th>Tiền tệ</th>
-                    <th>Số tiền vay</th>
-                    <th>Lãi suất (%)</th>
-                    <th>Hình thức trả</th>
-                    <th>Ngày vay</th>
-                    <th>Hết hạn</th>
-                    <th>Nhân viên</th>
-                    <th>Tình trạng</th>
-                </tr>
-            </thead>
-            <tbody>
-                @for (int i = 0; i < Model.Count; i++)
-                {
-                    var hd = Model[i];
+<div class="card border-0 shadow-lg">
+    <div class="card-header bg-light border-bottom-0 py-3">
+        <h4 class="mb-0 text-primary fw-bold">
+            <i class="bi bi-journal-text me-2"></i>
+            @ViewData["Title"]
+        </h4>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <!-- Thêm ID vào bảng để DataTables.js có thể tìm thấy -->
+            <table id="hopDongTable" class="table table-hover align-middle" style="width:100%">
+                <thead class="table-light">
                     <tr>
-                        <td class="text-center fw-bold">@(@i + 1)</td>
-                        <td>@hd.MaKhNavigation?.HoTen</td>
-                        <td>@hd.MaLoaiVayNavigation?.TenLoaiVay</td>
-                        <td>@hd.MaLoaiTienTeNavigation?.TenLoaiTienTe</td>
-                        <td>@hd.SoTienVay?.ToString("N0") đ</td>
-                        <td class="text-center">@hd.LaiSuat?.ToString("0.##")</td>
-                        <td>@hd.HinhThucTra</td>
-                        <td>@hd.NgayVay?.ToString("dd/MM/yyyy")</td>
-                        <td>@hd.NgayHetHan?.ToString("dd/MM/yyyy")</td>
-                        <td>@hd.MaNvNavigation?.TenNv</td>
-                        <td>
-                            @switch (hd.TinhTrang)
-                            {
-                                case "Chờ phê duyệt":
-                                    <span class="badge bg-warning text-dark">Chờ phê duyệt</span>
-                                    ;
-                                    break;
-                                case "Đã duyệt":
-                                    <span class="badge bg-success">Đã duyệt</span>
-                                    ;
-                                    break;
-                                default:
-                                    <span class="badge bg-secondary">@hd.TinhTrang</span>
-                                    ;
-                                    break;
-                            }
-                        </td>
+                        <th>Mã HĐ</th>
+                        <th>Khách hàng</th>
+                        <th>Số tiền vay</th>
+                        <th>Ngày vay</th>
+                        <th class="text-center">Tình trạng</th>
+                        <th class="text-center">Hành động</th>
                     </tr>
-                }
-            </tbody>
-        </table>
+                </thead>
+                <tbody>
+                    @foreach (var hd in Model)
+                    {
+                        <tr>
+                            <td class="fw-bold">#@hd.MaHopDong</td>
+                            <td>@hd.MaKhNavigation?.HoTen</td>
+                            <td class="text-end">@hd.SoTienVay.ToString("N0") VNĐ</td>
+                            <td>@hd.NgayVay?.ToString("dd/MM/yyyy")</td>
+                            <td class="text-center">
+                                @switch (hd.TinhTrang)
+                                {
+                                    case "Chờ phê duyệt":
+                                        <span class="badge bg-warning text-dark">Chờ phê duyệt</span>
+                                        ;
+                                        break;
+                                    case "Đã duyệt":
+                                        <span class="badge bg-success">Đã duyệt</span>
+                                        ;
+                                        break;
+                                    case "Đã từ chối":
+                                        <span class="badge bg-danger">Đã từ chối</span>
+                                        ;
+                                        break;
+                                    default:
+                                        <span class="badge bg-secondary">@hd.TinhTrang</span>
+                                        ;
+                                        break;
+                                }
+                            </td>
+                            <td class="text-center">
+                                <a asp-action="Details" asp-route-id="@hd.MaHopDong" class="btn btn-sm btn-outline-info border-0" title="Xem chi tiết">
+                                    <i class="bi bi-eye-fill"></i>
+                                </a>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
     </div>
 </div>
+
+@section Scripts {
+    <!-- Thêm các file CSS và JS của DataTables từ CDN -->
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css" />
+    <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+    <script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js"></script>
+
+    <!-- Script để khởi tạo DataTables -->
+    <script>
+        $(document).ready(function () {
+            $('#hopDongTable').DataTable({
+                "language": {
+                    "url": "//cdn.datatables.net/plug-ins/1.13.6/i18n/vi.json" // Thêm ngôn ngữ tiếng Việt
+                },
+                "pageLength": 10, // Số dòng mỗi trang
+                "lengthMenu": [ [10, 25, 50, -1], [10, 25, 50, "Tất cả"] ],
+                "order": [[ 0, "desc" ]] // Sắp xếp theo cột Mã HĐ giảm dần
+            });
+        });
+    </script>
+}

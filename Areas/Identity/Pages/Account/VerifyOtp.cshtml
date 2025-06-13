@@ -1,0 +1,30 @@
+﻿@page
+@model VerifyOtpModel
+@{
+    ViewData["Title"] = "Xác thực OTP";
+}
+
+<div class="container d-flex justify-content-center align-items-center" style="min-height: 80vh;">
+    <div class="card shadow-lg p-4 rounded-4" style="max-width: 400px; width: 100%;">
+        <div class="card-body">
+            <h4 class="card-title text-center mb-4 text-primary">🔐 Xác thực bảo mật 2 lớp</h4>
+            <p class="text-muted text-center">Mã OTP đã được gửi đến email của bạn. Vui lòng kiểm tra và nhập mã:</p>
+            <form method="post">
+                <div class="mb-3 text-center">
+                    <input asp-for="OtpInput" class="form-control text-center fw-bold fs-4 letter-spacing"
+                           style="max-width: 200px; margin: 0 auto;" maxlength="6" required />
+                    <span asp-validation-for="OtpInput" class="text-danger small d-block mt-2"></span>
+                </div>
+                <div class="d-grid">
+                    <button type="submit" class="btn btn-primary fw-bold">✅ Xác thực</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<style>
+    .letter-spacing {
+        letter-spacing: 6px;
+    }
+</style>

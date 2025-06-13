@@ -1,64 +1,105 @@
 ﻿@model IEnumerable<VAYTIEN.Models.HopDongVay>
 
 @{
-    ViewData["Title"] = "Phê duyệt hợp đồng";
+    ViewData["Title"] = "Phê duyệt Hợp đồng";
     Layout = "~/Areas/Admin/Views/Shared/_Layout.cshtml";
 }
 
-<h3 class="mb-4">📄 Danh sách yêu cầu vay đang chờ phê duyệt</h3>
-
-<!-- Thông báo kết quả -->
+<!-- Vùng hiển thị thông báo -->
 @if (TempData["Success"] != null)
 {
     <div class="alert alert-success alert-dismissible fade show" role="alert">
-        <i class="fas fa-check-circle me-2"></i> @TempData["Success"]
-        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        <i class="bi bi-check-circle-fill me-2"></i> @TempData["Success"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
     </div>
 }
 @if (TempData["Error"] != null)
 {
     <div class="alert alert-danger alert-dismissible fade show" role="alert">
-        <i class="fas fa-times-circle me-2"></i> @TempData["Error"]
-        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        <i class="bi bi-exclamation-triangle-fill me-2"></i> @TempData["Error"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
     </div>
 }
 
-<table class="table table-bordered table-hover">
-    <thead class="table-dark text-center">
-        <tr>
-            <th>Mã HĐ</th>
-            <th>Khách hàng</th>
-            <th>Số tiền vay</th>
-            <th>Hình thức trả</th>
-            <th>Trạng thái</th>
-            <th>Hành động</th>
-        </tr>
-    </thead>
-    <tbody>
-        @foreach (var hd in Model)
-        {
-            <tr>
-                <td class="text-center">@hd.MaHopDong</td>
-                <td>
-                    HoTen: @(hd.MaKhNavigation?.HoTen ?? "null")
-                </td>
+<div class="card border-0 shadow-lg">
+    <div class="card-header bg-light border-bottom-0 py-3">
+        <h4 class="mb-0 text-primary fw-bold">
+            <i class="bi bi-hourglass-split me-2"></i>
+            Danh sách Yêu cầu Vay đang chờ Phê duyệt
+        </h4>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr class="text-uppercase small">
+                        <th class="py-3 ps-4">Mã HĐ</th>
+                        <th>Khách hàng</th>
+                        <th class="text-end">Số tiền vay</th>
+                        <th>Hình thức trả</th>
+                        <th class="text-center">Hành động</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var hd in Model)
+                    {
+                        <tr>
+                            <td class="ps-4 fw-bold">#@hd.MaHopDong</td>
+                            <td>@hd.MaKhNavigation?.HoTen</td>
+                            <td class="text-end">@hd.SoTienVay.ToString("N0") VNĐ</td>
+                            <td>@hd.HinhThucTra</td>
+                            <td class="text-center">
+                                <!-- Nút Duyệt -->
+                                <form asp-action="PheDuyet" method="post" asp-route-id="@hd.MaHopDong" class="d-inline"
+                                      onsubmit="return confirm('Bạn có chắc chắn muốn PHÊ DUYỆT hợp đồng này không?');">
+                                    @Html.AntiForgeryToken()
+                                    <button type="submit" class="btn btn-success btn-sm">
+                                        <i class="bi bi-check-lg"></i> Duyệt
+                                    </button>
+                                </form>
+                                <form asp-action="TuChoi" method="post" asp-route-id="@hd.MaHopDong" class="d-inline"
+                                      onsubmit="return confirm('Bạn có chắc chắn muốn PHÊ DUYỆT hợp đồng này không?');">
+                                    @Html.AntiForgeryToken()
+                                    <button type="submit" class="btn btn-success btn-sm">
+                                        <i class="bi bi-x-lg"></i> Từ chối
+                                    </button>
+                                </form>
+                                <!-- Nút Từ chối (sẽ mở Modal) -->
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
 
-                <td class="text-end">@($"{hd.SoTienVay:N0}")</td>
-                <td>@hd.HinhThucTra</td>
-                <td class="text-center">@hd.TinhTrang</td>
-                <td class="text-center">
-                    <form asp-action="PheDuyet" method="post" asp-route-id="@hd.MaHopDong" class="d-inline">
-                        <button type="submit" class="btn btn-success btn-sm">
-                            <i class="fas fa-check"></i> Duyệt
-                        </button>
-                    </form>
-                    <form asp-action="TuChoi" method="post" asp-route-id="@hd.MaHopDong" class="d-inline ms-1">
-                        <button type="submit" class="btn btn-danger btn-sm">
-                            <i class="fas fa-times"></i> Từ chối
-                        </button>
-                    </form>
-                </td>
-            </tr>
-        }
-    </tbody>
-</table>
+<!-- ======================================================= -->
+<!-- MODAL ĐỂ NHẬP LÝ DO TỪ CHỐI (cho mỗi hợp đồng) -->
+<!-- ======================================================= -->
+@foreach (var hd in Model)
+{
+    <div class="modal fade" id="tuChoiModal-@hd.MaHopDong" tabindex="-1" aria-labelledby="modalLabel-@hd.MaHopDong" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <form asp-action="TuChoi" method="post" asp-route-id="@hd.MaHopDong">
+                    @Html.AntiForgeryToken()
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="modalLabel-@hd.MaHopDong">Lý do từ chối Hợp đồng #@hd.MaHopDong</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label for="lyDo-@hd.MaHopDong" class="form-label">Vui lòng nhập lý do từ chối:</label>
+                            <textarea id="lyDo-@hd.MaHopDong" name="lyDo" class="form-control" rows="3" required></textarea>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
+                        <button type="submit" class="btn btn-danger">Xác nhận Từ chối</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+}

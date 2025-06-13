@@ -18,6 +18,7 @@
                 <thead class="table-light">
                     <tr class="text-uppercase small">
                         <th class="py-3 ps-4">Mã GD</th>
+                        <th class="py-3">Tài Khoản Ghi Nhận</th>
                         <th class="py-3">Ngày Giao Dịch</th>
                         <th class="py-3 text-end">Số Tiền</th>
                         <th class="py-3 text-center">Loại Giao Dịch</th>
@@ -31,19 +32,44 @@
                             <td class="ps-4">
                                 <span class="fw-bold">#@item.MaGiaoDich</span>
                             </td>
-                            <td>@item.NgayGd?.ToString("dd/MM/yyyy")</td>
+                            <td>
+                                <!-- Hiển thị thông tin tài khoản và chủ tài khoản -->
+                                @if (item.MaTaiKhoanNavigation != null)
+                                {
+                                    <div class="fw-bold">@item.MaTaiKhoanNavigation.SoTaiKhoan</div>
+                                    <small class="text-muted">
+                                        @item.MaTaiKhoanNavigation.MaKhNavigation?.HoTen
+                                    </small>
+                                }
+                            </td>
+                            <td>@item.NgayGd.ToString("dd/MM/yyyy")</td>
                             <td class="text-end">
                                 @if (item.LoaiGd == "Thu nợ")
                                 {
-                                    <span class="fw-bold text-success">+ @item.SoTienGd?.ToString("N0") VNĐ</span>
+                                    <span class="fw-bold text-success">+ @item.SoTienGd.ToString("N0") VNĐ</span>
+                                }
+                                else if (item.LoaiGd == "Giải ngân")
+                                {
+                                    <span class="fw-bold text-danger">@item.SoTienGd.ToString("N0") VNĐ</span>
                                 }
                                 else
                                 {
-                                    <span class="fw-bold text-danger">- @item.SoTienGd?.ToString("N0") VNĐ</span>
+                                    <span>@item.SoTienGd.ToString("N0") VNĐ</span>
                                 }
                             </td>
                             <td class="text-center">
-                                <span class="badge bg-secondary">@item.LoaiGd</span>
+                                @if (item.LoaiGd == "Thu nợ")
+                                {
+                                    <span class="badge bg-success-subtle text-success-emphasis">@item.LoaiGd</span>
+                                }
+                                else if (item.LoaiGd == "Giải ngân")
+                                {
+                                    <span class="badge bg-danger-subtle text-danger-emphasis">@item.LoaiGd</span>
+                                }
+                                else
+                                {
+                                    <span class="badge bg-secondary">@item.LoaiGd</span>
+                                }
                             </td>
                             <td class="text-muted small pe-4">@item.NoiDungGd</td>
                         </tr>

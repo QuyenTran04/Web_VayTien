@@ -1,249 +1,253 @@
-
-using MailKit.Search;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Newtonsoft.Json;
 using System.Text;
 using VAYTIEN.Models;
-using static Org.BouncyCastle.Crypto.Engines.SM2Engine;
+using VAYTIEN.Services;
 
-public class ThanhToanController : Controller
+namespace VAYTIEN.Controllers
 {
-    private readonly QlvayTienContext _context;
-    private readonly MoMoService _momoService;
-    private readonly VnpayService _vnpayService;
-
-    public ThanhToanController(QlvayTienContext context, MoMoService momoService, VnpayService vnpayService)
+    [Authorize]
+    public class ThanhToanController : Controller
     {
-        _context = context;
-        _momoService = momoService;
-        _vnpayService = vnpayService;
-    }
+        private readonly QlvayTienContext _context;
+        private readonly MoMoService _momoService;
+        private readonly VnpayService _vnpayService;
+        private readonly IConfiguration _configuration;
 
-    // GET: /ThanhToan/ChiTiet?maHopDong=11&kyHanThu=1
-    public async Task<IActionResult> ChiTiet(int maHopDong, int kyHanThu)
-    {
-        var hopDong = await _context.HopDongVays.FindAsync(maHopDong);
-        if (hopDong == null) return NotFound();
-
-        var kh = await _context.KhachHangs
-            .FirstOrDefaultAsync(k => k.MaKh == hopDong.MaKh);
-        if (kh == null) return NotFound();
-
-        var lichTra = await _context.LichTraNos
-            .FirstOrDefaultAsync(x => x.MaHopDong == maHopDong && x.KyHanThu == kyHanThu);
-
-        var viewModel = new ThanhToanViewModel
+        public ThanhToanController(QlvayTienContext context, MoMoService momoService, VnpayService vnpayService, IConfiguration configuration)
         {
-            MaHopDong = maHopDong,
-            KyHan = kyHanThu,
-            TenKhachHang = kh.HoTen,
-            NgayTra = lichTra?.NgayTra?.ToDateTime(TimeOnly.MinValue) ?? DateTime.Today,
-            SoTienPhaiTra = lichTra?.SoTienPhaiTra ?? 0,
-            TrangThai = lichTra?.TrangThai ?? "Chưa trả"
-        };
+            _context = context;
+            _momoService = momoService;
+            _vnpayService = vnpayService;
+            _configuration = configuration;
+        }
 
-        return View(viewModel);
-    }
-    [HttpPost]
-    public async Task<IActionResult> ThucHien(ThanhToanViewModel model)
-    {
-        var lichTra = await _context.LichTraNos
-            .FirstOrDefaultAsync(x => x.MaHopDong == model.MaHopDong && x.KyHanThu == model.KyHan);
-
-        if (lichTra == null) return NotFound();
-
-        if (lichTra.TrangThai != "Đã trả")
+        // GET: /ThanhToan/ChiTiet?maHopDong=...&kyHanThu=...
+        // Hiển thị trang xác nhận thanh toán.
+        [HttpGet]
+        public async Task<IActionResult> ChiTiet(int maHopDong, int kyHanThu)
         {
+            var lichTra = await _context.LichTraNos
+                .Include(l => l.MaHopDongNavigation.MaKhNavigation)
+                .FirstOrDefaultAsync(x => x.MaHopDong == maHopDong && x.KyHanThu == kyHanThu);
+
+            if (lichTra?.MaHopDongNavigation?.MaKhNavigation == null)
+            {
+                return NotFound();
+            }
+            if (lichTra.MaHopDongNavigation.MaKhNavigation.Email != User.Identity?.Name)
+            {
+                return Forbid(); // Ngăn người dùng xem thanh toán của người khác
+            }
+
+            var viewModel = new ThanhToanViewModel
+            {
+                MaHopDong = maHopDong,
+                KyHan = kyHanThu,
+                TenKhachHang = lichTra.MaHopDongNavigation.MaKhNavigation.HoTen,
+                NgayTra = lichTra.NgayTra?.ToDateTime(TimeOnly.MinValue) ?? DateTime.Today,
+                SoTienPhaiTra = lichTra.SoTienPhaiTra ?? 0,
+                TrangThai = lichTra.TrangThai ?? "Chưa trả"
+            };
+
+            // Tính toán tiền phạt nếu có
+            var homNay = DateOnly.FromDateTime(DateTime.Now);
+            if (lichTra.TrangThai != "Đã trả" && lichTra.NgayTra < homNay)
+            {
+                var soNgayTre = homNay.DayNumber - lichTra.NgayTra.Value.DayNumber;
+                var penaltyRate = _configuration.GetValue<decimal>("PenaltySettings:DailyRate");
+                var tienPhat = (lichTra.SoTienGoc ?? 0) * penaltyRate * soNgayTre;
+                viewModel.SoNgayTre = soNgayTre;
+                viewModel.TienPhat = Math.Round(tienPhat, 0);
+            }
+
+            return View(viewModel);
+        }
+
+        // POST: /ThanhToan/ThucHien
+        // Tạo yêu cầu thanh toán đến cổng thanh toán đã chọn.
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> ThucHien(ThanhToanViewModel model)
+        {
+            var lichTra = await _context.LichTraNos
+                .Include(l => l.MaHopDongNavigation)
+                .AsNoTracking()
+                .FirstOrDefaultAsync(x => x.MaHopDong == model.MaHopDong && x.KyHanThu == model.KyHan);
+
+            if (lichTra == null) return NotFound();
+            if (lichTra.TrangThai == "Đã trả")
+            {
+                TempData["Error"] = "Kỳ hạn này đã được thanh toán.";
+                return RedirectToAction("ChiTiet", new { maHopDong = model.MaHopDong, kyHanThu = model.KyHan });
+            }
+
+            decimal totalAmount = model.SoTienPhaiTra + model.TienPhat;
+
+            // Kiểm tra số dư của khách hàng trước khi tạo yêu cầu
+            var customerAccount = await _context.TaiKhoanNganHangs.FirstOrDefaultAsync(tk => tk.MaKh == lichTra.MaHopDongNavigation.MaKh);
+            if (customerAccount == null || customerAccount.SoDu < totalAmount)
+            {
+                TempData["Error"] = "Số dư tài khoản không đủ để thực hiện giao dịch.";
+                return RedirectToAction("ChiTiet", new { maHopDong = model.MaHopDong, kyHanThu = model.KyHan });
+            }
+
+            string orderId = $"{model.MaHopDong}_{model.KyHan}_{Guid.NewGuid().ToString().Substring(0, 8)}";
+            string orderInfo = $"Thanh toan HD#{model.MaHopDong} Ky#{model.KyHan}";
+
             if (model.PhuongThuc == "Momo")
             {
-
-                string orderId = $"{model.MaHopDong}_{model.KyHan}_{Guid.NewGuid().ToString().Substring(0, 8)}";
-
-                string orderInfo = $"Thanh toan HD#{model.MaHopDong} Ky#{model.KyHan}";
                 string returnUrl = Url.Action("MoMoReturn", "ThanhToan", null, Request.Scheme)!;
                 string notifyUrl = Url.Action("MoMoNotify", "ThanhToan", null, Request.Scheme)!;
-
-                var payUrl = await _momoService.CreatePaymentAsync(orderId, (long)model.SoTienPhaiTra, orderInfo, returnUrl, notifyUrl);
+                var payUrl = await _momoService.CreatePaymentAsync(orderId, (long)totalAmount, orderInfo, returnUrl, notifyUrl);
+                return Redirect(payUrl);
+            }
+            else if (model.PhuongThuc == "VNPAY")
+            {
+                string returnUrl = Url.Action("VnpayReturn", "ThanhToan", null, Request.Scheme)!;
+                var clientIp = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "127.0.0.1";
+                var payUrl = _vnpayService.CreatePaymentUrl((long)totalAmount, orderId, orderInfo, clientIp);
                 return Redirect(payUrl);
             }
 
-            else if (model.PhuongThuc == "VNPAY")
-            {
-                // Tích hợp tương tự cho VNPAY nếu có
-                return Redirect($"https://vnpay.vn/pay?amount={model.SoTienPhaiTra}&ref={model.MaHopDong}-{model.KyHan}");
-            }
-
-            // Nếu không chọn cổng nào, xử lý nội bộ (không khuyến nghị)
-            lichTra.TrangThai = "Đã trả";
-            lichTra.NgayTra = DateOnly.FromDateTime(DateTime.Now);
-            await _context.SaveChangesAsync();
-        }
-        if (model.PhuongThuc == "VNPAY")
-        {
-            // Tạo orderId duy nhất giống như MoMo
-            string orderId = $"{model.MaHopDong}_{model.KyHan}_{Guid.NewGuid().ToString().Substring(0, 8)}";
-            string orderInfo = $"Thanh toan HD#{model.MaHopDong} Ky#{model.KyHan}";
-            string returnUrl = Url.Action("VnpayReturn", "ThanhToan", null, Request.Scheme)!;
-
-            var clientIp = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "127.0.0.1";
-            var payUrl = _vnpayService.CreatePaymentUrl((long)model.SoTienPhaiTra, orderId, orderInfo, clientIp);
-            return Redirect(payUrl);
+            TempData["Error"] = "Vui lòng chọn một phương thức thanh toán hợp lệ.";
+            return RedirectToAction("ThongTinVay", "KhachHang");
         }
 
-
-        return RedirectToAction("ThongTinVay", "KhachHang");
-    }
-    // Action MoMo chuyển về sau khi thanh toán (redirect khách)
-    public async Task<IActionResult> MoMoReturn()
-    {
-        // Lấy các giá trị MoMo trả về (query string)
-        var orderId = Request.Query["orderId"];
-    var resultCode = Request.Query["resultCode"];
-
-        if (resultCode == "0")
+        // Xử lý callback từ MoMo
+        public async Task<IActionResult> MoMoReturn()
         {
-            // Đã thanh toán thành công – update trạng thái
-            var ids = orderId.ToString().Split('_');
-    int maHopDong = int.Parse(ids[0]);
-    int kyHan = int.Parse(ids[1]);
-
-    var lichTra = await _context.LichTraNos
-        .FirstOrDefaultAsync(x => x.MaHopDong == maHopDong && x.KyHanThu == kyHan);
-
-            if (lichTra != null)
+            var orderId = Request.Query["orderId"].ToString();
+            var resultCode = Request.Query["resultCode"].ToString();
+            if (resultCode == "0")
             {
-                lichTra.TrangThai = "Đã trả";
-                lichTra.NgayTra = DateOnly.FromDateTime(DateTime.Now);
-
-                var hopDong = await _context.HopDongVays.FindAsync(maHopDong);
-                if (hopDong != null && lichTra.SoTienPhaiTra.HasValue)
-                {
-                    hopDong.SoTienConLai = (hopDong.SoTienConLai ?? hopDong.SoTienVay) - lichTra.SoTienPhaiTra.Value;
-                }
-
-                await _context.SaveChangesAsync();
-            }
-
-            ViewBag.Message = "Thanh toán thành công!";
-        }
-        else
-            {
-                ViewBag.Message = "Thanh toán không thành công hoặc bị hủy.";
-            }
-        return View();
-    }
-
-
-    // Action nhận webhook MoMo (IPN, hệ thống gọi tự động)
-    [HttpPost] 
-    public async Task<IActionResult> MoMoNotify()
-    {
-        using var reader = new StreamReader(Request.Body, Encoding.UTF8);
-        var body = await reader.ReadToEndAsync();
-
-        dynamic notifyData = Newtonsoft.Json.JsonConvert.DeserializeObject(body);
-        string orderId = notifyData.orderId;
-        string resultCode = notifyData.resultCode;
-
-        if (resultCode == "0")
-        {
-            var ids = orderId.ToString().Split('_');
-            int maHopDong = int.Parse(ids[0]);
-            int kyHan = int.Parse(ids[1]);
-
-            var lichTra = await _context.LichTraNos
-                .FirstOrDefaultAsync(x => x.MaHopDong == maHopDong && x.KyHanThu == kyHan);
-
-            if (lichTra != null)
-            {
-                lichTra.TrangThai = "Đã trả";
-                lichTra.NgayTra = DateOnly.FromDateTime(DateTime.Now);
-
-                var hopDong = await _context.HopDongVays.FindAsync(maHopDong);
-                if (hopDong != null && lichTra.SoTienPhaiTra.HasValue)
-                {
-                    hopDong.SoTienConLai = (hopDong.SoTienConLai ?? hopDong.SoTienVay) - lichTra.SoTienPhaiTra.Value;
-                }
-
-                await _context.SaveChangesAsync();
-            }
-        }
-
-       
-        return Ok();
-    }
-    public async Task<IActionResult> VnpayReturn()
-    {
-        var queryCollection = Request.Query;
-        if (queryCollection.Count > 0 && queryCollection.ContainsKey("vnp_ResponseCode") && queryCollection["vnp_ResponseCode"] == "00")
-        {
-            var orderId = queryCollection["vnp_TxnRef"].ToString();
-
-            var success = await ProcessSuccessfulPaymentAndUpdateDbAsync(orderId);
-            if (success)
-            {
-                TempData["Success"] = "Thanh toán VNPay thành công! Dư nợ của bạn đã được cập nhật.";
+                await ProcessSuccessfulPaymentAndUpdateDbAsync(orderId);
+                TempData["Success"] = "Thanh toán thành công!";
             }
             else
             {
-                TempData["Error"] = "Giao dịch đã được xử lý trước đó hoặc có lỗi xảy ra.";
+                TempData["Error"] = "Thanh toán không thành công hoặc bị hủy.";
             }
-        }
-        else
-        {
-            TempData["Error"] = "Thanh toán VNPay không thành công hoặc đã bị hủy.";
+            return RedirectToAction("ThongTinVay", "KhachHang");
         }
 
-        return RedirectToAction("ThongTinVay", "KhachHang");
-    }
-
-
-    // Hàm dùng chung để xử lý và cập nhật database
-    private async Task<bool> ProcessSuccessfulPaymentAndUpdateDbAsync(string orderId)
-    {
-        try
+        // Xử lý IPN từ MoMo
+        [HttpPost]
+        [AllowAnonymous]
+        public async Task<IActionResult> MoMoNotify()
         {
-            var ids = orderId.Split('_');
-            if (ids.Length < 2) return false;
-
-            int maHopDong = int.Parse(ids[0]);
-            int kyHan = int.Parse(ids[1]);
-
-            var lichTra = await _context.LichTraNos
-                .FirstOrDefaultAsync(x => x.MaHopDong == maHopDong && x.KyHanThu == kyHan);
-
-            // Rất quan trọng: Kiểm tra xem đã xử lý chưa để tránh cập nhật 2 lần
-            if (lichTra != null && lichTra.TrangThai != "Đã trả")
+            using var reader = new StreamReader(Request.Body, Encoding.UTF8);
+            var body = await reader.ReadToEndAsync();
+            dynamic? notifyData = JsonConvert.DeserializeObject(body);
+            if (notifyData != null && notifyData.resultCode == "0")
             {
-                lichTra.TrangThai = "Đã trả";
-                lichTra.NgayTra = DateOnly.FromDateTime(DateTime.Now);
+                string orderId = notifyData.orderId;
+                await ProcessSuccessfulPaymentAndUpdateDbAsync(orderId);
+            }
+            return Ok();
+        }
 
-                // --- Cập nhật số tiền còn lại ---
-                var hopDong = await _context.HopDongVays.FirstOrDefaultAsync(h => h.MaHopDong == maHopDong);
-                if (hopDong != null && lichTra.SoTienPhaiTra.HasValue)
+        // Xử lý callback từ VNPay
+        public async Task<IActionResult> VnpayReturn()
+        {
+            var queryCollection = Request.Query;
+            if (queryCollection.Count > 0 && queryCollection.ContainsKey("vnp_ResponseCode") && queryCollection["vnp_ResponseCode"] == "00")
+            {
+                var orderId = queryCollection["vnp_TxnRef"].ToString();
+                await ProcessSuccessfulPaymentAndUpdateDbAsync(orderId);
+                TempData["Success"] = "Thanh toán VNPay thành công!";
+            }
+            else
+            {
+                TempData["Error"] = "Thanh toán VNPay không thành công hoặc đã bị hủy.";
+            }
+            return RedirectToAction("ThongTinVay", "KhachHang");
+        }
+
+
+        // Hàm xử lý trung tâm sau khi có xác nhận thanh toán thành công
+        private async Task<bool> ProcessSuccessfulPaymentAndUpdateDbAsync(string orderId)
+        {
+            using var dbTransaction = await _context.Database.BeginTransactionAsync();
+            try
+            {
+                var ids = orderId.Split('_');
+                if (ids.Length < 2) return false;
+                int maHopDong = int.Parse(ids[0]);
+                int kyHan = int.Parse(ids[1]);
+
+                var lichTra = await _context.LichTraNos
+                    .Include(l => l.MaHopDongNavigation)
+                    .FirstOrDefaultAsync(x => x.MaHopDong == maHopDong && x.KyHanThu == kyHan);
+
+                if (lichTra == null || lichTra.TrangThai == "Đã trả")
                 {
-                    // Nếu SoTienConLai null thì mặc định bằng SoTienVay
-                    if (!hopDong.SoTienConLai.HasValue && hopDong.SoTienVay.HasValue)
-                    {
-                        hopDong.SoTienConLai = hopDong.SoTienVay;
-                    }
-                    // Trừ tiền kỳ hạn vừa trả (không âm)
-                    hopDong.SoTienConLai = Math.Max(0, (hopDong.SoTienConLai ?? 0) - lichTra.SoTienPhaiTra.Value);
+                    await dbTransaction.RollbackAsync();
+                    return false;
                 }
 
-                // Lưu thay đổi trạng thái kỳ trả nợ + hợp đồng
-                await _context.SaveChangesAsync();
+                var companyAccount = await _context.TaiKhoanNganHangs.FirstOrDefaultAsync(tk => tk.SoTaiKhoan == _configuration["AppSettings:CompanyBankAccountNumber"]);
+                var customerAccount = await _context.TaiKhoanNganHangs.FirstOrDefaultAsync(tk => tk.MaKh == lichTra.MaHopDongNavigation.MaKh);
 
+                if (companyAccount == null || customerAccount == null)
+                {
+                    await dbTransaction.RollbackAsync();
+                    return false;
+                }
+
+                // Tính toán lại tiền phạt tại thời điểm xử lý
+                decimal tienPhat = 0;
+                var homNay = DateOnly.FromDateTime(DateTime.Now);
+                if (lichTra.NgayTra < homNay)
+                {
+                    var soNgayTre = homNay.DayNumber - lichTra.NgayTra.Value.DayNumber;
+                    var penaltyRate = _configuration.GetValue<decimal>("PenaltySettings:DailyRate");
+                    tienPhat = (lichTra.SoTienGoc ?? 0) * penaltyRate * soNgayTre;
+                }
+                decimal totalPayment = (lichTra.SoTienPhaiTra ?? 0) + Math.Round(tienPhat, 0);
+
+                if (customerAccount.SoDu < totalPayment)
+                {
+                    await dbTransaction.RollbackAsync();
+                    return false;
+                }
+
+                // 1. Trừ tiền tài khoản khách hàng
+                customerAccount.SoDu -= totalPayment;
+
+                // 2. Cộng tiền vào tài khoản công ty/admin
+                companyAccount.SoDu += totalPayment;
+
+                // 3. Cập nhật trạng thái kỳ trả nợ và số tiền phạt
+                lichTra.TrangThai = "Đã trả";
+                lichTra.NgayTra = homNay;
+                lichTra.SoTienPhat = Math.Round(tienPhat, 0);
+
+                // 4. Cập nhật số nợ gốc còn lại của hợp đồng
+                var hopDong = lichTra.MaHopDongNavigation;
+                if (hopDong != null)
+                {
+                    hopDong.SoTienConLai -= (lichTra.SoTienGoc ?? 0);
+                }
+
+                // 5. Ghi nhận 2 giao dịch
+                var debitTransaction = new GiaoDich { MaTaiKhoan = customerAccount.MaTaiKhoan, NgayGd = homNay, SoTienGd = -totalPayment, LoaiGd = "Thanh toán nợ", NoiDungGd = $"Thanh toán HĐ #{maHopDong}, kỳ {kyHan}" };
+                _context.GiaoDiches.Add(debitTransaction);
+
+                var creditTransaction = new GiaoDich { MaTaiKhoan = companyAccount.MaTaiKhoan, NgayGd = homNay, SoTienGd = totalPayment, LoaiGd = "Thu nợ", NoiDungGd = $"Nhận thanh toán HĐ #{maHopDong}, kỳ {kyHan}" };
+                _context.GiaoDiches.Add(creditTransaction);
+
+                await _context.SaveChangesAsync();
+                await dbTransaction.CommitAsync();
                 return true;
             }
+            catch
+            {
+                await dbTransaction.RollbackAsync();
+                return false;
+            }
         }
-        catch
-        {
-            // Ghi log lỗi ở đây nếu cần
-            return false;
-        }
-
-        return false;
     }
-
 }

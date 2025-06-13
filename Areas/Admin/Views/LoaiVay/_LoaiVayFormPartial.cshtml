@@ -1,6 +1,7 @@
 ﻿@model VAYTIEN.Models.LoaiVay
 
 @{
+    // Biến này sẽ giúp form tự nhận diện nó đang ở chế độ "Sửa" hay "Tạo mới"
     bool isEditMode = Model != null && Model.MaLoaiVay > 0;
 }
 
@@ -25,12 +26,14 @@
                         <input type="hidden" asp-for="MaLoaiVay" />
                     }
 
+                    <!-- Tên Sản phẩm Vay -->
                     <div class="form-floating mb-3">
                         <input asp-for="TenLoaiVay" class="form-control" id="tenLoaiVay" placeholder="Tên sản phẩm vay" />
                         <label for="tenLoaiVay">Tên sản phẩm vay</label>
                         <span asp-validation-for="TenLoaiVay" class="text-danger"></span>
                     </div>
 
+                    <!-- Lãi suất & Kỳ hạn -->
                     <div class="row gx-3">
                         <div class="col-md-6">
                             <div class="form-floating mb-3">
@@ -48,12 +51,14 @@
                         </div>
                     </div>
 
+                    <!-- Ghi Chú -->
                     <div class="form-floating mb-3">
                         <textarea asp-for="GhiChu" class="form-control" placeholder="Để lại ghi chú ở đây" id="ghiChu" style="height: 100px"></textarea>
                         <label for="ghiChu">Ghi chú / Mô tả ngắn</label>
                         <span asp-validation-for="GhiChu" class="text-danger"></span>
                     </div>
 
+                    <!-- Các nút hành động -->
                     <div class="d-grid gap-2 d-md-flex justify-content-md-end mt-4">
                         <a asp-action="Index" class="btn btn-outline-secondary">Quay lại Danh sách</a>
                         <button type="submit" class="btn btn-primary px-4">

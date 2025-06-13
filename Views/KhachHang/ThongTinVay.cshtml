@@ -1,92 +1,190 @@
 @model VAYTIEN.Models.ThongTinVayViewModel
 
-<h2 class="text-primary">Thông Tin Tất Cả Hợp Đồng Vay</h2>
-<p class="alert alert-info">
-    <strong>Tổng số tiền đã vay:</strong> @Model.TongSoTienVay.ToString("N0") VNĐ
-</p>
+@{
+    ViewData["Title"] = "Quản lý các Khoản vay";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
 
-@foreach (var hd in Model.HopDongs)
+<!-- Vùng hiển thị thông báo thành công/thất bại từ TempData -->
+@if (TempData["Success"] != null)
 {
-    <div class="card mb-4">
-        <div class="card-header bg-secondary text-white">
-            <strong>Hợp đồng #@hd.MaHopDong</strong> —
-            <span class="text-warning">Đã vay:</span> @hd.SoTienVay?.ToString("N0") VNĐ —
-            <span class="text-light">Còn lại:</span> @hd.SoTienConLai?.ToString("N0") VNĐ
-        </div>
-        <div class="card-body">
-            <p><strong>Thời gian vay:</strong> @hd.NgayVay?.ToString("dd/MM/yyyy") → @hd.NgayHetHan?.ToString("dd/MM/yyyy")</p>
+    <div class="alert alert-success alert-dismissible fade show" role="alert">
+        <i class="bi bi-check-circle-fill me-2"></i>
+        @TempData["Success"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+}
+@if (TempData["Error"] != null)
+{
+    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+        <i class="bi bi-exclamation-triangle-fill me-2"></i>
+        @TempData["Error"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+}
 
-            @{
-                var lichTraTam = hd.LichTra ?? new List<VAYTIEN.Models.LichTraViewModel>();
-
-                var kyCanThanhToan = lichTraTam
-                .Where(x => (x.TrangThai?.Trim() == "Chưa trả") && x.NgayTra.HasValue)
-                .OrderBy(x => x.KyHanThu)
-                .FirstOrDefault();
-            }
-
-            @if (kyCanThanhToan != null)
-            {
-                <div class="mb-3 p-2 border rounded bg-light">
-                    <strong>🔔 Tháng cần thanh toán:</strong> @kyCanThanhToan.NgayTra?.ToString("MM/yyyy") —
-                    <strong>Số tiền:</strong> @kyCanThanhToan.SoTienPhaiTra?.ToString("N0") VNĐ
-
-                    <form method="get" asp-controller="ThanhToan" asp-action="ChiTiet" class="d-inline ms-3">
-                        <input type="hidden" name="maHopDong" value="@hd.MaHopDong" />
-                        <input type="hidden" name="kyHanThu" value="@kyCanThanhToan.KyHanThu" />
-                        <button type="submit" class="btn btn-sm btn-success">Thanh toán kỳ này</button>
-                    </form>
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2 class="text-primary fw-bold mb-0">@ViewData["Title"]</h2>
+    <a asp-controller="KhachHang" asp-action="CreateStep1" class="btn btn-primary shadow-sm">
+        <i class="bi bi-plus-circle-fill me-2"></i>Đăng ký khoản vay mới
+    </a>
+</div>
+<!-- ============================================= -->
+<div class="row g-4 mb-4">
+    <div class="col-md-6">
+        <div class="card h-100 shadow-sm border-info">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <div class="flex-shrink-0 bg-info bg-opacity-10 text-info rounded-circle p-3">
+                        <i class="bi bi-wallet2 fs-4"></i>
+                    </div>
+                    <div class="flex-grow-1 ms-3">
+                        <p class="text-muted mb-1">Tổng dư nợ gốc</p>
+                        <h4 class="mb-0">@Model.TongSoTienVay.ToString("N0") <small>VNĐ</small></h4>
+                    </div>
                 </div>
-            }
-
-            <table class="table table-bordered">
-                <thead class="table-light">
-                    <tr>
-                        <th>Kỳ hạn</th>
-                        <th>Ngày trả</th>
-                        <th>Số tiền</th>
-                        <th>Trạng thái</th>
-                        <th>Thanh toán</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @foreach (var item in lichTraTam.OrderBy(x => x.KyHanThu))
-                    {
-                        var trangThai = item.TrangThai?.Trim() ?? "Chưa trả";
-                        var isChuaTra = trangThai == "Chưa trả";
-
-                        <tr>
-                            <td>@item.KyHanThu</td>
-                            <td>@item.NgayTra?.ToString("dd/MM/yyyy")</td>
-                            <td>@item.SoTienPhaiTra?.ToString("N0") VNĐ</td>
-                            <td>
-                                @if (trangThai == "Đã trả")
-                                {
-                                    <span class="badge bg-success">Đã trả</span>
-                                }
-                                else if (trangThai == "Chưa trả")
-                                {
-                                    <span class="badge bg-warning text-dark">Chưa trả</span>
-                                }
-                                else
-                                {
-                                    <span class="badge bg-secondary">@trangThai</span>
-                                }
-                            </td>
-                            <td>
-                                @if (isChuaTra)
-                                {
-                                    <form method="get" asp-controller="ThanhToan" asp-action="ChiTiet">
-                                        <input type="hidden" name="maHopDong" value="@hd.MaHopDong" />
-                                        <input type="hidden" name="kyHanThu" value="@item.KyHanThu" />
-                                        <button type="submit" class="btn btn-sm btn-danger">Thanh toán</button>
-                                    </form>
-                                }
-                            </td>
-                        </tr>
-                    }
-                </tbody>
-            </table>
+            </div>
         </div>
     </div>
+    @if (Model.TaiKhoans.Any())
+    {
+        <div class="col-md-6">
+            <div class="card h-100 shadow-sm border-success">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="flex-shrink-0 bg-success bg-opacity-10 text-success rounded-circle p-3">
+                            <i class="bi bi-cash-coin fs-4"></i>
+                        </div>
+                        <div class="flex-grow-1 ms-3">
+                            <p class="text-muted mb-1">Số dư tài khoản (@Model.TaiKhoans.First().SoTaiKhoan)</p>
+                            <h4 class="mb-0">@Model.TaiKhoans.First().SoDu.ToString("N0") <small>VNĐ</small></h4>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+
+<!-- Hiển thị Tổng dư nợ gốc còn lại -->
+<div class="alert alert-info">
+    <strong>@ViewBag.LabelTongTien:</strong> @Model.TongSoTienVay.ToString("N0") VNĐ
+</div>
+
+
+@if (Model == null || Model.HopDongs == null || !Model.HopDongs.Any())
+{
+    <div class="text-center p-5 border rounded bg-light">
+        <h4>Bạn chưa có hợp đồng vay nào.</h4>
+        <p>Hãy bắt đầu bằng cách đăng ký một khoản vay mới ngay hôm nay!</p>
+    </div>
+}
+else
+{
+    foreach (var hd in Model.HopDongs.OrderByDescending(h => h.MaHopDong))
+    {
+        <div class="card shadow-sm mb-4">
+            <div class="card-header bg-secondary text-white py-3">
+                <h5 class="mb-0 d-flex justify-content-between align-items-center">
+                    <span>
+                        <i class="bi bi-file-earmark-text-fill me-2"></i>
+                        <strong>Hợp đồng #@hd.MaHopDong</strong>
+                    </span>
+                    <!-- Hiển thị trạng thái của Hợp đồng -->
+                    <span class="badge fs-6 @(hd.TinhTrang == "Đã duyệt" ? "bg-success" : (hd.TinhTrang == "Chờ phê duyệt" ? "bg-warning text-dark" : "bg-danger"))">
+                        @hd.TinhTrang
+                    </span>
+                </h5>
+            </div>
+            <div class="card-body">
+                <!-- ======================================================= -->
+                <!-- SỬA LỖI: Thêm lại thông tin Số tiền vay và Còn lại -->
+                <!-- ======================================================= -->
+                <p>
+                    <strong>Số tiền vay:</strong> <span class="text-danger fw-bold">@hd.SoTienVay?.ToString("N0") VNĐ</span> |
+                    <strong>Còn lại:</strong> <span class="text-success fw-bold">@hd.SoTienConLai?.ToString("N0") VNĐ</span> |
+                    <strong>Thời gian:</strong> @hd.NgayVay?.ToString("dd/MM/yyyy") - @hd.NgayHetHan?.ToString("dd/MM/yyyy")
+                </p>
+
+                @if (hd.LichTra != null && hd.LichTra.Any())
+                {
+                    // Tìm kỳ hạn thanh toán tiếp theo (kỳ đầu tiên có trạng thái "Chưa trả")
+                    var kyCanThanhToan = hd.LichTra.OrderBy(l => l.KyHanThu).FirstOrDefault(x => x.TrangThai != "Đã trả");
+
+                    if (kyCanThanhToan != null)
+                    {
+                        <div class="alert alert-info d-flex justify-content-between align-items-center">
+                            <span>
+                                <i class="bi bi-bell-fill me-2"></i>
+                                <strong>Kỳ hạn thanh toán tiếp theo:</strong> @kyCanThanhToan.SoTienPhaiTra?.ToString("N0") VNĐ
+                            </span>
+                            <a asp-controller="ThanhToan" asp-action="ChiTiet" asp-route-maHopDong="@hd.MaHopDong" asp-route-kyHanThu="@kyCanThanhToan.KyHanThu" class="btn btn-sm btn-success">
+                                Thanh toán ngay
+                            </a>
+                        </div>
+                    }
+
+                    <table class="table table-bordered table-striped table-hover small">
+                        <thead class="table-light text-center">
+                            <tr>
+                                <th>Kỳ hạn</th>
+                                <th>Ngày trả</th>
+                                <th>Số tiền</th>
+                                <th>Trạng thái</th>
+                                <th>Hành động</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var item in hd.LichTra.OrderBy(l => l.KyHanThu))
+                            {
+                                <tr>
+                                    <td class="text-center fw-bold">@item.KyHanThu</td>
+                                    <td class="text-center">@item.NgayTra?.ToString("dd/MM/yyyy")</td>
+                                    <td class="text-end fw-bold">@item.SoTienPhaiTra?.ToString("N0")</td>
+                                    <td class="text-center">
+                                        @if (item.TrangThai == "Đã trả")
+                                        {
+                                            <span class="badge bg-success"><i class="bi bi-check-circle-fill me-1"></i> Đã thanh toán</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge bg-warning text-dark"><i class="bi bi-hourglass-split me-1"></i> Chưa thanh toán</span>
+                                        }
+                                    </td>
+                                    <td class="text-center">
+                                        @if (item.TrangThai == "Đã trả")
+                                        {
+                                            <span class="text-success fw-bold">
+                                                <i class="bi bi-check2-all"></i> Hoàn tất
+                                            </span>
+                                        }
+                                        // SỬA LỖI: Chỉ cho phép thanh toán đúng kỳ hạn tiếp theo
+                                        else if (kyCanThanhToan != null && item.KyHanThu == kyCanThanhToan.KyHanThu)
+                                        {
+                                            <a asp-controller="ThanhToan" asp-action="ChiTiet"
+                                               asp-route-maHopDong="@hd.MaHopDong"
+                                               asp-route-kyHanThu="@item.KyHanThu"
+                                               class="btn btn-sm btn-danger">
+                                                Thanh toán
+                                            </a>
+                                        }
+                                        else
+                                        {
+                                            // Vô hiệu hóa nút đối với các kỳ trong tương lai
+                                            <button class="btn btn-sm btn-secondary" disabled>Thanh toán</button>
+                                        }
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                }
+                else
+                {
+                    <div class="alert alert-secondary">Lịch trả nợ cho hợp đồng này đang chờ được tạo sau khi admin phê duyệt.</div>
+                }
+            </div>
+        </div>
+    }
 }

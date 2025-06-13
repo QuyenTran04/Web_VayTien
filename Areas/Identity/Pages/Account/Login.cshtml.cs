@@ -1,5 +1,4 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
-// The .NET Foundation licenses this file to you under the MIT license.
+﻿
 #nullable disable
 
 using System;
@@ -21,15 +20,16 @@ namespace VAYTIEN.Areas.Identity.Pages.Account
         private readonly SignInManager<ApplicationUser> _signInManager;
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly ILogger<LoginModel> _logger;
-
+        private readonly EmailService _emailService;
         public LoginModel(
             SignInManager<ApplicationUser> signInManager,
-            UserManager<ApplicationUser> userManager,
+            UserManager<ApplicationUser> userManager, EmailService emailService,
             ILogger<LoginModel> logger)
         {
             _signInManager = signInManager;
             _userManager = userManager;
             _logger = logger;
+            _emailService = emailService;
         }
 
         [BindProperty]
@@ -70,6 +70,11 @@ namespace VAYTIEN.Areas.Identity.Pages.Account
             ExternalLogins = (await _signInManager.GetExternalAuthenticationSchemesAsync()).ToList();
             ReturnUrl = returnUrl;
         }
+        private string GenerateOtp()
+        {
+            var rnd = new Random();
+            return rnd.Next(100000, 999999).ToString();
+        }
 
         public async Task<IActionResult> OnPostAsync(string returnUrl = null)
         {
@@ -91,26 +96,31 @@ namespace VAYTIEN.Areas.Identity.Pages.Account
 
                 if (user != null)
                 {
-                    var result = await _signInManager.PasswordSignInAsync(user.UserName, Input.Password, Input.RememberMe, lockoutOnFailure: false);
-
+                    var result = await _signInManager.CheckPasswordSignInAsync(user, Input.Password, false);
                     if (result.Succeeded)
                     {
                         var roles = await _userManager.GetRolesAsync(user);
-                        _logger.LogInformation("User logged in.");
 
-                        if (roles.Contains(SD.Role_Admin))
+                        if (roles.Contains(SD.Role_Admin)) // Chỉ gửi OTP nếu là admin
                         {
-                            return RedirectToAction("Index", "Dashboard", new { area = "Admin" });
+                            // Sinh OTP
+                            var otp = GenerateOtp();
+                            HttpContext.Session.SetString("Otp", otp);
+                            HttpContext.Session.SetString("OtpUserId", user.Id);
+                            HttpContext.Session.SetString("OtpExpired", DateTime.UtcNow.AddMinutes(2).ToString());
+
+                            await _emailService.SendAsync(
+                                user.Email,
+                                "Mã xác thực đăng nhập",
+                                $"Mã OTP của bạn là: <b>{otp}</b> (có hiệu lực trong 2 phút)");
+
+                            return RedirectToPage("./VerifyOtp", new { ReturnUrl = returnUrl, RememberMe = Input.RememberMe });
                         }
-                        else
+                        else // Nếu không phải admin thì đăng nhập thẳng
                         {
+                            await _signInManager.SignInAsync(user, Input.RememberMe);
                             return RedirectToAction("Index", "Home", new { area = "" });
                         }
-                    }
-
-                    if (result.RequiresTwoFactor)
-                    {
-                        return RedirectToPage("./LoginWith2fa", new { ReturnUrl = returnUrl, RememberMe = Input.RememberMe });
                     }
 
                     if (result.IsLockedOut)
@@ -118,6 +128,8 @@ namespace VAYTIEN.Areas.Identity.Pages.Account
                         _logger.LogWarning("User account locked out.");
                         return RedirectToPage("./Lockout");
                     }
+
+                    ModelState.AddModelError(string.Empty, "Thông tin đăng nhập không đúng.");
                 }
 
                 ModelState.AddModelError(string.Empty, "Thông tin đăng nhập không đúng.");

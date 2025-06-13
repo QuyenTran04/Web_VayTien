@@ -1,15 +1,20 @@
 ﻿using Microsoft.AspNetCore.Identity;
 using System.ComponentModel.DataAnnotations;
 
-namespace VAYTIEN.Models // 💡 namespace phải giống với DbContext của bạn
+namespace VAYTIEN.Models
 {
     public class ApplicationUser : IdentityUser
     {
-        [Required]
+        [Required(ErrorMessage = "Vui lòng nhập họ và tên.")]
+        [StringLength(100)]
         public string FullName { get; set; }
+
+        [StringLength(255)]
         public string? Address { get; set; }
-        public string? Age { get; set; }
+
+        public DateOnly? DateOfBirth { get; set; }
+
+        [StringLength(12)]
         public string? CCCD { get; set; }
-        public string? VaiTro { get; set; } // Admin, NhanVien, KhachHang
     }
 }

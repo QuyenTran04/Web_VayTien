@@ -75,13 +75,18 @@ namespace VAYTIEN.Areas.Identity.Pages.Account
 
 
             [Required(ErrorMessage = "Vui lòng nhập họ tên.")]
-[Display(Name = "Họ tên")]
-public string FullName { get; set; }
+            [Display(Name = "Họ tên")]
+            public string FullName { get; set; }
 
             [Required]
             [EmailAddress]
             [Display(Name = "Email")]
             public string Email { get; set; }
+
+            [Required(ErrorMessage = "Vui lòng nhập CCCD.")]
+            [Display(Name = "CCCD")]
+            public string CCCD { get; set; }
+
 
             [Required]
             [StringLength(100, ErrorMessage = "The {0} must be at least {2} and at max {1} characters long.", MinimumLength = 6)]
@@ -126,6 +131,7 @@ public string FullName { get; set; }
             {
                 var user = CreateUser();
                 user.FullName = Input.FullName;
+                user.CCCD = Input.CCCD;
                 await _userStore.SetUserNameAsync(user, Input.Email, CancellationToken.None);
                 await _emailStore.SetEmailAsync(user, Input.Email, CancellationToken.None);
                 var result = await _userManager.CreateAsync(user, Input.Password);

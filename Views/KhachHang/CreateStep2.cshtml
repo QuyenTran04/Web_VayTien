@@ -1,84 +1,99 @@
-﻿@model VAYTIEN.Models.HopDongVay
+﻿@model VAYTIEN.Models.CreateStep2ViewModel
 
 @{
+    ViewData["Title"] = "Đăng ký vay tiền - Bước 2";
     var loaiVayList = ViewBag.LoaiVayList as List<VAYTIEN.Models.LoaiVay>;
     var loaiTienList = ViewBag.LoaiTienTeList as List<VAYTIEN.Models.LoaiTienTe>;
 }
 
-<form asp-action="CreateStep2" method="post">
-    <div class="mb-3">
-        <label>Loại vay</label>
-        <select asp-for="MaLoaiVay" class="form-select" required>
-            <option value="">-- Chọn loại vay --</option>
-            @foreach (var item in loaiVayList!)
-            {
-                <option value="@item.MaLoaiVay">@item.TenLoaiVay</option>
-            }
-        </select>
-    </div>
+<h2 class="text-center mb-4">@ViewData["Title"]</h2>
 
-    <div class="mb-3">
-        <label>Loại tiền</label>
-        <select asp-for="MaLoaiTienTe" class="form-select" required>
-            <option value="">-- Chọn loại tiền --</option>
-            @foreach (var item in loaiTienList!)
-            {
-                <option value="@item.MaLoaiTienTe">@item.TenLoaiTienTe</option>
-            }
-        </select>
-    </div>
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <form asp-action="CreateStep2" method="post">
+            @Html.AntiForgeryToken()
 
-    <div class="mb-3">
-        <label>Số tiền vay</label>
-        <select asp-for="SoTienVay" class="form-select" required>
-            <option value="">-- Chọn hạn mức --</option>
-            <option value="10000000">10 triệu</option>
-            <option value="20000000">20 triệu</option>
-            <option value="30000000">30 triệu</option>
-            <option value="50000000">50 triệu</option>
-            <option value="100000000">100 triệu</option>
-        </select>
-    </div>
+            <!-- Thêm một input ẩn để lưu dữ liệu từ Bước 1 -->
+            <input type="hidden" name="khachHangJson" value="@ViewBag.KhachHangJson" />
 
-    <div class="mb-3">
-        <label>Ngày vay</label>
-        <input asp-for="NgayVay" type="date" class="form-control" required />
-    </div>
+            <div asp-validation-summary="All" class="text-danger"></div>
 
-    <div class="mb-3">
-        <label>Hình thức trả</label>
-        <select asp-for="HinhThucTra" class="form-select" required>
-            <option value="">-- Chọn hình thức trả --</option>
-            <option value="Trả góp hàng tháng">Trả góp hàng tháng</option>
-            <option value="Trả một lần cuối kỳ">Trả một lần cuối kỳ</option>
-            <option value="Trả gốc định kỳ, lãi hàng tháng">Trả gốc định kỳ, lãi hàng tháng</option>
-        </select>
-    </div>
+            <div class="mb-3">
+                <label asp-for="HopDong.MaLoaiVay" class="form-label">Loại vay</label>
+                <select asp-for="HopDong.MaLoaiVay" class="form-select" required>
+                    <option value="">-- Chọn loại vay --</option>
+                    @foreach (var item in loaiVayList!)
+                    {
+                        <option value="@item.MaLoaiVay">@item.TenLoaiVay</option>
+                    }
+                </select>
+                <span asp-validation-for="HopDong.MaLoaiVay" class="text-danger"></span>
+            </div>
 
-    <div class="mb-3">
-        <label>Kỳ hạn vay (tháng)</label>
-        <select asp-for="KyHanThang" class="form-select" required>
-            <option value="">-- Chọn kỳ hạn --</option>
-            <option value="6">6 tháng</option>
-            <option value="9">9 tháng</option>
-            <option value="12">12 tháng</option>
-            <option value="15">15 tháng</option>
-            <option value="18">18 tháng</option>
-            <option value="24">24 tháng</option>
-            <option value="36">36 tháng</option>
-        </select>
-    </div>
+            <div class="mb-3">
+                <label asp-for="HopDong.MaLoaiTienTe" class="form-label">Loại tiền</label>
+                <select asp-for="HopDong.MaLoaiTienTe" class="form-select" required>
+                    <option value="">-- Chọn loại tiền --</option>
+                    @foreach (var item in loaiTienList!)
+                    {
+                        <option value="@item.MaLoaiTienTe">@item.TenLoaiTienTe</option>
+                    }
+                </select>
+                <span asp-validation-for="HopDong.MaLoaiTienTe" class="text-danger"></span>
+            </div>
 
-    <h5 class="mt-4">Tài sản thế chấp</h5>
-    <div class="mb-3">
-        <input name="TenTaiSan" placeholder="Tên tài sản" class="form-control" required />
-    </div>
-    <div class="mb-3">
-        <input name="GiaTri" placeholder="Giá trị (VNĐ)" class="form-control" type="number" required />
-    </div>
-    <div class="mb-3">
-        <textarea name="MoTa" placeholder="Mô tả tài sản" class="form-control" rows="3"></textarea>
-    </div>
+            <div class="mb-3">
+                <label asp-for="HopDong.SoTienVay" class="form-label">Số tiền vay (VNĐ)</label>
+                <!-- Sửa thành ô nhập số để linh hoạt hơn -->
+                <input asp-for="HopDong.SoTienVay" type="number" class="form-control" placeholder="Nhập số tiền bạn muốn vay" min="5000000" step="1000000" required />
+                <span asp-validation-for="HopDong.SoTienVay" class="text-danger"></span>
+            </div>
 
-    <button type="submit" class="btn btn-success">Gửi yêu cầu phê duyệt</button>
-</form>
+            <div class="mb-3">
+                <label asp-for="HopDong.NgayVay" class="form-label">Ngày vay</label>
+                <input asp-for="HopDong.NgayVay" type="date" class="form-control" required />
+                <span asp-validation-for="HopDong.NgayVay" class="text-danger"></span>
+            </div>
+
+            <div class="mb-3">
+                <label asp-for="HopDong.HinhThucTra" class="form-label">Hình thức trả</label>
+                <select asp-for="HopDong.HinhThucTra" class="form-select" required>
+                    <option value="">-- Chọn hình thức trả --</option>
+                    <option value="Trả góp hàng tháng">Trả góp hàng tháng</option>
+                    <option value="Trả một lần cuối kỳ">Trả một lần cuối kỳ</option>
+                </select>
+                <span asp-validation-for="HopDong.HinhThucTra" class="text-danger"></span>
+            </div>
+
+            <div class="mb-3">
+                <label asp-for="HopDong.KyHanThang" class="form-label">Kỳ hạn vay (tháng)</label>
+                <input asp-for="HopDong.KyHanThang" type="number" class="form-control" placeholder="Nhập số tháng muốn vay" required />
+                <span asp-validation-for="HopDong.KyHanThang" class="text-danger"></span>
+            </div>
+
+            <hr class="my-4" />
+
+            <h5 class="mt-4">Tài sản thế chấp</h5>
+            <!-- Sử dụng asp-for cho các trường của Tài sản -->
+            <div class="mb-3">
+                <input asp-for="TaiSan.TenTaiSan" placeholder="Tên tài sản" class="form-control" />
+                <span asp-validation-for="TaiSan.TenTaiSan" class="text-danger"></span>
+            </div>
+            <div class="mb-3">
+                <input asp-for="TaiSan.GiaTri" placeholder="Giá trị (VNĐ)" class="form-control" type="number" />
+                <span asp-validation-for="TaiSan.GiaTri" class="text-danger"></span>
+            </div>
+            <div class="mb-3">
+                <textarea asp-for="TaiSan.MoTa" placeholder="Mô tả tài sản" class="form-control" rows="3"></textarea>
+            </div>
+
+            <div class="d-grid mt-3">
+                <button type="submit" class="btn btn-success btn-lg">Gửi yêu cầu phê duyệt</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

@@ -1,4 +1,4 @@
-﻿@{
+﻿﻿@{
     Layout = null;
 }
 
@@ -93,7 +93,14 @@
                 <a class="nav-link" asp-controller="LoaiVay" asp-action="Index">
                     <i class="bi bi-cash-stack me-2"></i> Quản Lý Loại Vay
                 </a>
-
+                <!-- THÊM DÒNG NÀY VÀO -->
+                <a asp-area="Admin" asp-controller="TaiKhoan" asp-action="Index" class="list-group-item list-group-item-action">
+                    <i class="bi bi-credit-card-2-front-fill"></i><span>Tài khoản Ngân hàng</span>
+                </a>
+                <!-- ------------------ -->
+                <a asp-area="Admin" asp-controller="HopDong" asp-action="NoQuaHan" class="list-group-item list-group-item-action">
+                    <i class="bi bi-calendar-x-fill text-danger"></i><span class="text-danger">Nợ Quá Hạn</span>
+                </a>
                 <a class="nav-link" asp-controller="CauHinhTinDung" asp-action="Index">
                     <i class="bi bi-sliders me-2"></i> Cấu Hình Tín Dụng
                 </a>
@@ -106,9 +113,10 @@
                     <i class="bi bi-ui-radios-grid me-2"></i> Forms
                 </a>
 
-                <form asp-controller="Account" asp-action="Logout" method="post" class="d-inline">
-                    <button type="submit" class="nav-link btn btn-link text-start w-100">
-                        <i class="bi bi-box-arrow-right me-2"></i> Đăng Xuất
+                <form id="logoutForm" class="form-inline" asp-area="Identity" asp-page="/Account/Logout"
+                      asp-route-returnUrl="@Url.Action("Index", "Home", new { area = "" })">
+                    <button id="logout" type="submit" class="nav-link btn btn-link text-dark border-0">
+                        Đăng xuất
                     </button>
                 </form>
             </div>
@@ -121,5 +129,26 @@
             </div>
         </div>
     </div>
+    @await RenderSectionAsync("Scripts", required: false)
+
+    <script>
+        // Toggle sidebar
+        document.getElementById("menu-toggle").addEventListener("click", function(e) {
+            e.preventDefault();
+            document.getElementById("wrapper").classList.toggle("toggled");
+        });
+
+        // Active link highlighting
+        document.addEventListener("DOMContentLoaded", function(){
+            const links = document.querySelectorAll("#sidebar-wrapper .list-group-item");
+            const currentPath = window.location.pathname;
+
+            links.forEach(link => {
+                if (link.getAttribute("href").toLowerCase() === currentPath.toLowerCase()) {
+                    link.classList.add("active");
+                }
+            });
+        });
+    </script>
 </body>
 </html>
