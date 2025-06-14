@@ -262,6 +262,59 @@ namespace VAYTIEN.Areas.Admin.Controllers
 
             return View(danhSachNoQuaHan); // Trả về View NoQuaHan.cshtml
         }
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> GuiNhacNho(int maLich)
+        {
+            var lichTra = await _context.LichTraNos
+                                .Include(l => l.MaHopDongNavigation.MaKhNavigation)
+                                .FirstOrDefaultAsync(l => l.MaLich == maLich);
+
+            if (lichTra == null)
+            {
+                TempData["Error"] = "Không tìm thấy kỳ hạn nợ để gửi nhắc nhở.";
+                return RedirectToAction(nameof(NoQuaHan));
+            }
+
+            var khachHang = lichTra.MaHopDongNavigation.MaKhNavigation;
+            var hopDong = lichTra.MaHopDongNavigation;
+            var homNay = DateOnly.FromDateTime(DateTime.Now);
+            var soNgayTre = homNay.DayNumber - (lichTra.NgayTra?.DayNumber ?? homNay.DayNumber);
+
+            // Soạn nội dung email nhắc nợ
+            var emailBody = $@"
+        <p>Kính gửi Quý khách <strong>{khachHang.HoTen}</strong>,</p>
+        <p>Ngân hàng VAYTIEN trân trọng thông báo về khoản thanh toán quá hạn của Quý khách:</p>
+        <ul>
+            <li><strong>Hợp đồng số:</strong> #{hopDong.MaHopDong}</li>
+            <li><strong>Kỳ hạn thanh toán thứ:</strong> {lichTra.KyHanThu}</li>
+            <li><strong>Ngày đến hạn:</strong> {lichTra.NgayTra:dd/MM/yyyy}</li>
+            <li><strong>Số tiền cần thanh toán:</strong> {lichTra.SoTienPhaiTra:N0} VNĐ</li>
+            <li><strong>Số ngày quá hạn:</strong> {soNgayTre} ngày</li>
+        </ul>
+        <p>Để tránh phát sinh các khoản phí phạt không mong muốn, Quý khách vui lòng thực hiện thanh toán cho kỳ hạn này trong thời gian sớm nhất.</p>
+        <p>Nếu Quý khách đã thanh toán, vui lòng bỏ qua thông báo này. Xin cảm ơn!</p>
+        <br/>
+        <p>Trân trọng,</p>
+        <p><strong>Ngân hàng VAYTIEN</strong></p>";
+
+            try
+            {
+                await _emailSender.SendEmailAsync(
+                    khachHang.Email,
+                    $"Thông báo Nhắc nợ Hợp đồng #{hopDong.MaHopDong}",
+                    emailBody
+                );
+                TempData["Success"] = $"Đã gửi email nhắc nợ thành công cho khách hàng {khachHang.HoTen}.";
+            }
+            catch (Exception ex)
+            {
+                TempData["Error"] = "Có lỗi xảy ra khi gửi email: " + ex.Message;
+            }
+
+            return RedirectToAction(nameof(NoQuaHan));
+        }
+
 
     }
 }

@@ -1,26 +1,22 @@
 ﻿@{
-    ViewData["Title"] = "Trang chủ"; Layout = "~/Views/Shared/_Layout.cshtml";
+    ViewData["Title"] = "Trang chủ";
+    Layout = "~/Views/Shared/_Layout.cshtml";
 }
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" />
-
-<!-- Toggle Button -->
+@using Microsoft.AspNetCore.Identity
+@inject SignInManager<ApplicationUser> SignInManager
+@inject UserManager<ApplicationUser> UserManager
+<!-- Toggle Sidebar Button -->
 <button class="btn btn-light position-fixed shadow-sm rounded-circle d-flex align-items-center justify-content-center"
         id="menuToggle"
         style="top: 30px; left: 20px; width: 50px; height: 50px; z-index: 1030">
     <i class="bi bi-list" style="font-size: 1.6rem"></i>
 </button>
 
-<!-- Sidebar Menu -->
+<!-- Sidebar -->
 <div id="sidebarMenu"
      class="position-fixed start-0 bg-white shadow-lg border-end"
-     style="
-    top: 1px;
-    width: 260px;
-    height: calc(100vh - 10px);
-    transform: translateX(-100%);
-    transition: transform 0.3s ease;
-    z-index: 1020;
-  ">
+     style="top: 1px; width: 260px; height: calc(100vh - 10px); transform: translateX(-100%); transition: transform 0.3s ease; z-index: 1020;">
     <div class="p-3 border-bottom d-flex justify-content-between align-items-center">
         <strong class="text-primary">Menu</strong>
         <button class="btn btn-sm btn-outline-secondary" onclick="toggleMenu()">
@@ -28,45 +24,38 @@
         </button>
     </div>
     <ul class="list-group list-group-flush">
-        <li class="list-group-item">
-            <a class="text-decoration-none" asp-controller="Home" asp-action="Index">
-                <i class="bi bi-house me-2"></i>Trang chủ
-            </a>
-        </li>
-        <li class="list-group-item">
-            <a class="text-decoration-none" asp-controller="TaiKhoanNganHang" asp-action="ThongTinCaNhan">
-                <i class="bi bi-person-circle me-2"></i>Tài khoản
-            </a>
-        </li>
-        <li class="list-group-item">
-            <a class="text-decoration-none" asp-controller="KhachHang" asp-action="ThongTinVay">
-                <i class="bi bi-clock-history me-2"></i>Lịch sử vay
-            </a>
-        </li>
-        <li class="list-group-item">
-            <a class="text-decoration-none" asp-controller="KhachHang" asp-action="TrangThaiVay">
-                <i class="bi bi-info-circle me-2"></i>Trạng thái vay
-            </a>
-        </li>
-        <li class="list-group-item">
-            <a class="text-decoration-none" asp-controller="Account" asp-action="">
-                <i class="bi bi-percent me-2"></i>Bảng Lãi Suất
-            </a>
-        </li>
-        <li class="list-group-item">
-            <a class="text-decoration-none" asp-controller="KhachHang" asp-action="CreateStep1">
-                <i class="bi bi-journal-plus me-2"></i>Đăng ký vay
-            </a>
-        </li>
-        <li class="list-group-item">
-            <a class="text-decoration-none" asp-controller="Home" asp-action="Index">
-                <i class="bi bi-stars me-2"></i>Khuyến Mãi
-            </a>
-        </li>
+        <li class="list-group-item"><a class="text-decoration-none" asp-controller="Home" asp-action="Index"><i class="bi bi-house me-2"></i>Trang chủ</a></li>
+        <li class="list-group-item"><a class="text-decoration-none" asp-controller="TaiKhoanNganHang" asp-action="ThongTinCaNhan"><i class="bi bi-person-circle me-2"></i>Tài khoản</a></li>
+        <li class="list-group-item"><a class="text-decoration-none" asp-controller="KhachHang" asp-action="ThongTinVay"><i class="bi bi-clock-history me-2"></i>Lịch sử vay</a></li>
+        <li class="list-group-item"><a class="text-decoration-none" asp-controller="KhachHang" asp-action="TrangThaiVay"><i class="bi bi-info-circle me-2"></i>Trạng thái vay</a></li>
+        <li class="list-group-item"><a class="text-decoration-none" asp-controller="Account" asp-action=""><i class="bi bi-percent me-2"></i>Bảng Lãi Suất</a></li>
+        <li class="list-group-item"><a class="text-decoration-none" asp-controller="KhachHang" asp-action="CreateStep1"><i class="bi bi-journal-plus me-2"></i>Đăng ký vay</a></li>
+        <li class="list-group-item"><a class="text-decoration-none" asp-controller="Home" asp-action="Index"><i class="bi bi-stars me-2"></i>Khuyến Mãi</a></li>
     </ul>
-
 </div>
 
+<!-- Chatbot Coze -->
+
+<script src="https://sf-cdn.coze.com/obj/unpkg-va/flow-platform/chat-app-sdk/1.2.0-beta.6/libs/oversea/index.js"></script>
+<script>
+    new CozeWebSDK.WebChatClient({
+      config: {
+        bot_id: '7515655526622560257',
+      },
+      componentProps: {
+        title: 'Coze',
+      },
+      auth: {
+        type: 'token',
+        token: 'pat_Tgslgv2w5DLqZK1hofhj4azovBeeKexjZxa0JB0kbuxwFqyB4lPgD0KNFowf6gxl',
+        onRefreshToken: function () {
+          return 'pat_Tgslgv2w5DLqZK1hofhj4azovBeeKexjZxa0JB0kbuxwFqyB4lPgD0KNFowf6gxl'
+        }
+      }
+    });
+</script>
+
+<!-- Chọn nhu cầu vay -->
 <div class="container mb-5">
     <h3 class="text-center mb-4 fw-bold fs-3">Bạn đang có nhu cầu vay cho mục đích gì?</h3>
     <div class="d-flex justify-content-center align-items-center gap-2 flex-wrap">
@@ -82,11 +71,9 @@
     </div>
 </div>
 
-
+<!-- Danh sách gói vay -->
 <div class="container py-5">
     <div class="row align-items-stretch g-4">
-
-        <!-- Gói vay nhà ở -->
         <div class="col-md-6">
             <a asp-controller="Page" asp-action="Index" asp-route-id="1" class="text-decoration-none text-dark">
                 <div class="card-loan d-flex flex-row overflow-hidden h-100">
@@ -105,8 +92,6 @@
             </a>
         </div>
 
-
-        <!-- Các gói vay khác -->
         @foreach (var goi in new[] {
         new { Id = 2, Title = "Vay kinh doanh", Img = "/images/kinhdoanh.jpg" },
         new { Id = 3, Title = "Vay du lịch", Img = "/images/dulich.webp" },
@@ -133,11 +118,10 @@
                 </a>
             </div>
         }
-
-
     </div>
 </div>
 
+<!-- CSS -->
 <style>
     .card-loan {
         border-radius: 18px;
@@ -213,19 +197,19 @@
             background-color: #005c57;
             border-color: #005c57;
         }
-
 </style>
 
+<!-- Sidebar Toggle JS -->
 <script>
     const sidebar = document.getElementById("sidebarMenu");
     const menuToggle = document.getElementById("menuToggle");
 
     function toggleMenu() {
-      if (sidebar.style.transform === "translateX(0%)") {
-        sidebar.style.transform = "translateX(-100%)";
-      } else {
-        sidebar.style.transform = "translateX(0%)";
-      }
+        if (sidebar.style.transform === "translateX(0%)") {
+            sidebar.style.transform = "translateX(-100%)";
+        } else {
+            sidebar.style.transform = "translateX(0%)";
+        }
     }
 
     menuToggle.addEventListener("click", toggleMenu);

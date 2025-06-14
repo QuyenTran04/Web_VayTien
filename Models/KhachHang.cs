@@ -56,7 +56,11 @@ public partial class KhachHang
     [Display(Name = "Ảnh đính kèm")]
     public string? AnhDinhKem { get; set; }
 
+    [Display(Name = "Điểm tín dụng")]
+    public int? DiemTinDung { get; set; }
 
+    [Display(Name = "Hạn mức vay tối đa")]
+    public decimal? HanMucVay { get; set; }
     // === Navigation Properties ===
 
     [ForeignKey("DoiTuongVayMaDoiTuongVay")]

@@ -1,0 +1,94 @@
+﻿@{
+    ViewData["Title"] = "Báo cáo Doanh thu Lãi vay";
+    Layout = "~/Areas/Admin/Views/Shared/_Layout.cshtml";
+}
+
+<div class="card border-0 shadow-lg">
+    <div class="card-header bg-light border-bottom-0 py-3">
+        <h4 class="mb-0 text-primary fw-bold">
+            <i class="bi bi-graph-up-arrow me-2"></i>
+            @ViewData["Title"]
+        </h4>
+        <p class="mb-0 text-muted">Biểu đồ đường thể hiện tổng doanh thu từ lãi vay qua các tháng.</p>
+    </div>
+    <div class="card-body p-4">
+        <div style="height: 400px;">
+            <canvas id="revenueChart"></canvas>
+        </div>
+    </div>
+    <div class="card-footer bg-light text-muted small">
+        Dữ liệu được thống kê trong 12 tháng gần nhất.
+    </div>
+</div>
+
+@section Scripts {
+    <!-- Thêm thư viện Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            // Dữ liệu từ Controller
+            const labels = @Html.Raw(Json.Serialize(ViewBag.ChartLabels));
+            const dataValues = @Html.Raw(Json.Serialize(ViewBag.ChartData));
+
+            const data = {
+                labels: labels,
+                datasets: [{
+                    label: 'Doanh thu Lãi vay (VNĐ)',
+                    backgroundColor: 'rgba(13, 110, 253, 0.1)',
+                    borderColor: 'rgba(13, 110, 253, 1)',
+                    data: dataValues,
+                    fill: true,
+                    tension: 0.4, // Làm cho đường cong mượt hơn
+                    pointBackgroundColor: '#fff',
+                    pointBorderColor: 'rgba(13, 110, 253, 1)',
+                    pointHoverRadius: 7,
+                    pointHoverBackgroundColor: 'rgba(13, 110, 253, 1)',
+                }]
+            };
+
+            const config = {
+                type: 'line',
+                data: data,
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                callback: function(value, index, values) {
+                                    return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(value);
+                                }
+                            }
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            display: false
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    let label = context.dataset.label || '';
+                                    if (label) {
+                                        label += ': ';
+                                    }
+                                    if (context.parsed.y !== null) {
+                                        label += new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(context.parsed.y);
+                                    }
+                                    return label;
+                                }
+                            }
+                        }
+                    }
+                }
+            };
+
+            // Vẽ biểu đồ
+            const myChart = new Chart(
+                document.getElementById('revenueChart'),
+                config
+            );
+        });
+    </script>
+}

@@ -1,0 +1,100 @@
+﻿@model IEnumerable<VAYTIEN.Models.LichTraNo>
+
+@{
+    ViewData["Title"] = "Báo cáo Doanh thu";
+    Layout = "~/Areas/Admin/Views/Shared/_Layout.cshtml";
+    var fromDate = ViewBag.FromDate as DateTime?;
+    var toDate = ViewBag.ToDate as DateTime?;
+    var totalRevenue = (decimal)ViewBag.TotalRevenue;
+}
+
+<div class="card border-0 shadow-lg">
+    <div class="card-header bg-light border-bottom-0 py-3">
+        <h4 class="mb-0 text-primary fw-bold">
+            <i class="bi bi-bar-chart-line-fill me-2"></i>
+            @ViewData["Title"]
+        </h4>
+        <p class="mb-0 text-muted">Lọc và xem báo cáo doanh thu theo khoảng thời gian tùy chọn.</p>
+    </div>
+    <div class="card-body">
+        <!-- Form lọc theo ngày -->
+        <form asp-action="BaoCaoDoanhThu" method="get">
+            <div class="row align-items-end g-3 mb-4">
+                <div class="col-md-4">
+                    <label for="fromDate" class="form-label">Từ ngày</label>
+                    <input type="date" id="fromDate" name="fromDate" value="@fromDate?.ToString("yyyy-MM-dd")" class="form-control">
+                </div>
+                <div class="col-md-4">
+                    <label for="toDate" class="form-label">Đến ngày</label>
+                    <input type="date" id="toDate" name="toDate" value="@toDate?.ToString("yyyy-MM-dd")" class="form-control">
+                </div>
+                <div class="col-md-4 d-flex gap-2">
+                    <button type="submit" class="btn btn-primary w-100">
+                        <i class="bi bi-funnel-fill me-2"></i>Xem Báo cáo
+                    </button>
+                    <!-- Nút Xuất Excel -->
+                    <a class="btn btn-success w-100"
+                       asp-action="ExportDoanhThuToExcel"
+                       asp-route-fromDate="@fromDate?.ToString("yyyy-MM-dd")"
+                       asp-route-toDate="@toDate?.ToString("yyyy-MM-dd")">
+                        <i class="bi bi-file-earmark-excel-fill me-2"></i>Xuất Excel
+                    </a>
+                </div>
+            </div>
+        </form>
+
+        <!-- Kết quả báo cáo -->
+        <div class="alert alert-success">
+            Tổng doanh thu từ <strong>@fromDate?.ToString("dd/MM/yyyy")</strong> đến <strong>@toDate?.ToString("dd/MM/yyyy")</strong> là:
+            <strong class="fs-5">@totalRevenue.ToString("N0") VNĐ</strong>
+        </div>
+
+        <div class="table-responsive">
+            <table id="doanhThuTable" class="table table-hover align-middle" style="width:100%">
+                <thead class="table-light">
+                    <tr>
+                        <th>Mã HĐ</th>
+                        <th>Kỳ hạn</th>
+                        <th>Ngày Thanh Toán</th>
+                        <th>Khách hàng</th>
+                        <th class="text-end">Tiền Phạt</th>
+                        <th class="text-end">Tổng Thu (VNĐ)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var item in Model)
+                    {
+                        <tr>
+                            <td>#@item.MaHopDong</td>
+                            <td class="text-center">@item.KyHanThu</td>
+                            <td>@item.NgayTra?.ToString("dd/MM/yyyy")</td>
+                            <td class="fw-bold">@item.MaHopDongNavigation?.MaKhNavigation?.HoTen</td>
+                            <td class="text-end text-danger">@((item.SoTienPhat ?? 0).ToString("N0"))</td>
+                            <td class="text-end text-success fw-bold">+ @(((item.SoTienPhaiTra ?? 0) + (item.SoTienPhat ?? 0)).ToString("N0"))</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <!-- Thêm các file CSS và JS của DataTables từ CDN -->
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css" />
+    <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+    <script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js"></script>
+
+    <!-- Script để khởi tạo DataTables -->
+    <script>
+        $(document).ready(function () {
+            $('#doanhThuTable').DataTable({
+                "language": {
+                    "url": "//cdn.datatables.net/plug-ins/1.13.6/i18n/vi.json"
+                },
+                "pageLength": 10,
+                "order": [[ 2, "desc" ]] // Sắp xếp theo Ngày Thanh Toán giảm dần
+            });
+        });
+    </script>
+}

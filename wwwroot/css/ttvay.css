@@ -1,0 +1,36 @@
+﻿.btn-gradient-primary {
+    background: linear-gradient(90deg,#2563eb 0,#38bdf8 100%);
+    color: #fff;
+    border: none;
+    transition: box-shadow .2s;
+}
+
+.btn-gradient-success {
+    background: linear-gradient(90deg,#22c55e 0,#65a30d 100%);
+    color: #fff;
+    border: none;
+    transition: box-shadow .2s;
+}
+
+.hover-shadow:hover, .card:hover {
+    box-shadow: 0 8px 36px 0 rgba(50, 112, 241, 0.13) !important;
+    transform: translateY(-2px) scale(1.01);
+}
+
+.table-striped > tbody > tr.table-success > td {
+    background-color: #e6fffa;
+}
+/* Responsive fix for smaller screens */
+@media (max-width: 576px) {
+    .table-responsive {
+        font-size: 0.98em;
+    }
+
+    .card-body, .card-header {
+        padding: 1rem !important;
+    }
+
+    .alert {
+        padding: .75rem !important;
+    }
+}

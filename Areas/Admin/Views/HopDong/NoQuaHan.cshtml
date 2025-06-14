@@ -45,9 +45,12 @@
                             </td>
                             <td class="text-end fw-bold">@item.SoTienPhaiTra?.ToString("N0") VNĐ</td>
                             <td class="text-center pe-4">
-                                <a href="#" class="btn btn-sm btn-outline-warning">
-                                    <i class="bi bi-envelope-fill me-1"></i> Gửi nhắc nhở
-                                </a>
+                                <form asp-action="GuiNhacNho" method="post" class="d-inline">
+                                    <input type="hidden" name="maLich" value="@item.MaLich" />
+                                    <button type="submit" class="btn btn-sm btn-outline-warning" onclick="return confirm('Gửi nhắc nhở đến khách hàng này?');">
+                                        <i class="bi bi-envelope-fill me-1"></i> Gửi nhắc nhở
+                                    </button>
+                                </form>
                             </td>
                         </tr>
                     }
@@ -59,4 +62,3 @@
         Có tổng cộng @Model.Count() kỳ hạn đang bị quá hạn.
     </div>
 </div>
-

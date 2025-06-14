@@ -77,7 +77,7 @@
                                 <a asp-action="Edit" asp-route-id="@item.MaLoaiVay" class="btn btn-sm btn-outline-primary border-0" title="Sửa">
                                     <i class="bi bi-pencil-square fs-5"></i>
                                 </a>
-                                <a href="@Url.Action("Import")" class="btn btn-success">Import từ Excel</a>
+                                
 
                                 <form asp-action="Delete" method="post" asp-route-id="@item.MaLoaiVay" class="d-inline" onsubmit="return confirm('Bạn có chắc chắn muốn xóa sản phẩm này?');">
                                     @Html.AntiForgeryToken()
@@ -96,3 +96,4 @@
         Tổng cộng có @Model.Count() sản phẩm vay.
     </div>
 </div>
+
