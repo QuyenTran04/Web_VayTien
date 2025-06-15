@@ -1,0 +1,58 @@
+﻿@{
+    var users = ViewBag.Users as IEnumerable<VAYTIEN.Models.ApplicationUser>;
+    var currentUserId = ViewBag.CurrentUserId as string;
+}
+<h3>Chat với khách hàng</h3>
+<div style="display:flex;">
+    <div style="width:180px;margin-right:20px;">
+        <b>Khách hàng online</b>
+        <ul>
+            @foreach (var user in users)
+            {
+                <li>
+                    <a href="@Url.Action("AdminChat", "Chat", new { userId = user.Id })">
+                        @user.UserName
+                    </a>
+                </li>
+            }
+        </ul>
+    </div>
+    <div style="flex:1;">
+        @if (!string.IsNullOrEmpty(currentUserId))
+        {
+            <div id="chatWindow" style="height:350px;overflow-y:auto;border:1px solid #ccc;padding:10px;margin-bottom:10px"></div>
+            <input type="text" id="messageInput" class="form-control mb-2" placeholder="Nhập tin nhắn..." autocomplete="off" />
+            <button onclick="sendMessage()" class="btn btn-success">Gửi</button>
+        }
+        else
+        {
+            <p>Chọn khách hàng để chat</p>
+        }
+    </div>
+</div>
+@if (!string.IsNullOrEmpty(currentUserId))
+{
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/7.0.5/signalr.min.js"></script>
+    <script>
+        const userId = "@currentUserId";
+        const connection = new signalR.HubConnectionBuilder().withUrl("/chatHub").build();
+
+        connection.on("ReceiveMessage", function (senderId, senderName, message) {
+            const msg = document.createElement("div");
+            msg.innerHTML = `<b>${senderName}:</b> ${message}`;
+            document.getElementById("chatWindow").appendChild(msg);
+            document.getElementById("chatWindow").scrollTop = document.getElementById("chatWindow").scrollHeight;
+        });
+
+        connection.start();
+
+        function sendMessage() {
+            const message = document.getElementById("messageInput").value;
+            if (message.trim()) {
+                connection.invoke("SendMessage", userId, message)
+                    .catch(err => console.error(err.toString()));
+                document.getElementById("messageInput").value = "";
+            }
+        }
+    </script>
+}

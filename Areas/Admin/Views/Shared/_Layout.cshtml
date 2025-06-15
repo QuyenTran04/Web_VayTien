@@ -121,7 +121,7 @@
                 <a class="nav-link" asp-controller="Forms" asp-action="Index">
                     <i class="bi bi-ui-radios-grid me-2"></i> Forms
                 </a>
-
+                <li class="list-group-item"><a class="text-decoration-none" asp-controller="Chat" asp-action="AdminChat"><i class="bi bi-stars me-2"></i>Hỗ trợ</a></li>
                 <form id="logoutForm" class="form-inline" asp-area="Identity" asp-page="/Account/Logout"
                       asp-route-returnUrl="@Url.Action("Index", "Home", new { area = "" })">
                     <button id="logout" type="submit" class="nav-link btn btn-link text-dark border-0">

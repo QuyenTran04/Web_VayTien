@@ -1,0 +1,36 @@
+﻿@{
+    ViewData["Title"] = "Chat realtime";
+}
+
+<div style="max-width:400px;margin:auto;">
+    <div id="chatWindow" style="height:300px;overflow-y:auto;border:1px solid #d1d5db;padding:10px;border-radius:8px;background:#f8fafc;margin-bottom:10px"></div>
+    <input type="text" id="userInput" placeholder="Tên của bạn" class="form-control mb-2" />
+    <input type="text" id="messageInput" placeholder="Nhập tin nhắn..." class="form-control mb-2" />
+    <button onclick="sendMessage()" class="btn btn-primary w-100">Gửi</button>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/7.0.5/signalr.min.js"></script>
+<script>
+    const connection = new signalR.HubConnectionBuilder()
+        .withUrl("/chatHub")
+        .build();
+
+    connection.on("ReceiveMessage", function (user, message) {
+        const msg = document.createElement("div");
+        msg.innerHTML = `<b>${user}:</b> ${message}`;
+        document.getElementById("chatWindow").appendChild(msg);
+        document.getElementById("chatWindow").scrollTop = document.getElementById("chatWindow").scrollHeight;
+    });
+
+    connection.start().catch(err => console.error(err.toString()));
+
+    function sendMessage() {
+        const user = document.getElementById("userInput").value;
+        const message = document.getElementById("messageInput").value;
+        if (user.trim() && message.trim()) {
+            connection.invoke("SendMessage", user, message)
+                .catch(err => console.error(err.toString()));
+            document.getElementById("messageInput").value = "";
+        }
+    }
+</script>
