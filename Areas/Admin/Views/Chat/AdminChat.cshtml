@@ -1,0 +1,104 @@
+﻿@using VAYTIEN.Models
+@{
+    var users = ViewBag.Users as IEnumerable<ApplicationUser>;
+    var currentUserId = ViewBag.CurrentUserId as string;
+    var selfId = ViewBag.SelfId as string;
+    var selfName = ViewBag.SelfName as string;
+    Layout = "~/Areas/Admin/Views/Shared/_Layout.cshtml"; 
+}
+<div class="row mt-4">
+    <!-- Danh sách khách hàng -->
+    <div class="col-3">
+        <h5>Khách hàng</h5>
+        <ul class="list-group">
+            @if (users != null)
+            {
+                foreach (var user in users)
+                {
+                    <li class="list-group-item @(user.Id == currentUserId ? "active" : "")">
+                        <a href="@Url.Action("AdminChat", "Chat", new { area = "Admin", userId = user.Id })"
+                           style="text-decoration:none; color:@(user.Id == currentUserId ? "#fff" : "#000");">
+                            <i class="bi bi-person"></i> @user.UserName
+                        </a>
+                    </li>
+                }
+            }
+            else
+            {
+                <li class="list-group-item">Chưa có khách hàng</li>
+            }
+        </ul>
+    </div>
+
+    <!-- Khung chat -->
+    <div class="col-9">
+        @if (!string.IsNullOrEmpty(currentUserId))
+        {
+            <div class="card shadow-sm mb-3">
+                <div class="card-header bg-primary text-white">
+                    <i class="bi bi-chat-dots"></i> Chat với khách hàng
+                </div>
+                <div class="card-body" style="height:380px; overflow-y:auto;" id="chatWindow">
+                    @if (ViewBag.ChatHistory != null)
+                    {
+                        foreach (var msg in (IEnumerable<ChatMessage>)ViewBag.ChatHistory)
+                        {
+                            <div class="mb-2 @(msg.SenderId == selfId ? "text-end" : "text-start")">
+                                <span class="badge bg-@(msg.SenderId == selfId ? "success" : "secondary")">
+                                    @msg.SenderName
+                                </span>
+                                <span class="ms-2">@msg.Message</span>
+                                <div style="font-size:11px;color:#888;">
+                                    @msg.SentAt.ToString("HH:mm dd/MM/yyyy")
+                                </div>
+                            </div>
+                        }
+                    }
+                </div>
+                <div class="card-footer">
+                    <div class="input-group">
+                        <input type="text" id="messageInput" class="form-control" placeholder="Nhập tin nhắn..." autocomplete="off" />
+                        <button class="btn btn-primary" onclick="sendMessage()"><i class="bi bi-send"></i> Gửi</button>
+                    </div>
+                </div>
+            </div>
+        }
+        else
+        {
+            <div class="alert alert-info mt-3">
+                Chọn khách hàng bên trái để bắt đầu chat.
+            </div>
+        }
+    </div>
+</div>
+
+@if (!string.IsNullOrEmpty(currentUserId))
+{
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/7.0.5/signalr.min.js"></script>
+    <script>
+        const userId = "@currentUserId";
+        const connection = new signalR.HubConnectionBuilder().withUrl("/chatHub").build();
+
+        connection.on("ReceiveMessage", function (senderId, senderName, message) {
+            const chatWindow = document.getElementById("chatWindow");
+            const msgDiv = document.createElement("div");
+            msgDiv.className = "mb-2 " + (senderId === "@selfId" ? "text-end" : "text-start");
+            msgDiv.innerHTML =
+                `<span class="badge bg-${senderId === "@selfId" ? "success" : "secondary"}">${senderName}</span>
+                 <span class="ms-2">${message}</span>`;
+            chatWindow.appendChild(msgDiv);
+            chatWindow.scrollTop = chatWindow.scrollHeight;
+        });
+
+        connection.start();
+
+        function sendMessage() {
+            const message = document.getElementById("messageInput").value;
+            if (message.trim()) {
+                connection.invoke("SendMessage", userId, message)
+                    .catch(err => console.error(err.toString()));
+                document.getElementById("messageInput").value = "";
+            }
+        }
+    </script>
+}

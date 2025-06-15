@@ -2,38 +2,38 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Identity;
 using VAYTIEN.Models;
+using Microsoft.EntityFrameworkCore;
 
-namespace VAYTIEN.Controllers
+[Authorize(Roles = "Customer")]
+public class ChatController : Controller
 {
-    //[Authorize]
-    public class ChatController : Controller
+    private readonly UserManager<ApplicationUser> _userManager;
+    private readonly QlvayTienContext _context;
+
+    public ChatController(UserManager<ApplicationUser> userManager, QlvayTienContext context)
     {
-        private readonly UserManager<ApplicationUser> _userManager;
-
-        public ChatController(UserManager<ApplicationUser> userManager)
-        {
-            _userManager = userManager;
-        }
-
-        [Authorize(Roles = "Customer")]
-        public async Task<IActionResult> UserChat()
-        {
-            var admin = (await _userManager.GetUsersInRoleAsync("Admin")).FirstOrDefault();
-            ViewBag.AdminId = admin?.Id;
-            ViewBag.SelfId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
-            ViewBag.SelfName = User.Identity.Name;
-            return View();
-        }
-
-        [Authorize(Roles = "Admin")]
-        public async Task<IActionResult> AdminChat(string userId)
-        {
-            var users = await _userManager.GetUsersInRoleAsync("Customer");
-            ViewBag.Users = users;
-            ViewBag.CurrentUserId = userId;
-            ViewBag.SelfId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
-            ViewBag.SelfName = User.Identity.Name;
-            return View();
-        }
+        _userManager = userManager;
+        _context = context;
     }
+
+    public async Task<IActionResult> UserChat()
+    {
+        // Lấy admin đầu tiên
+        var admin = (await _userManager.GetUsersInRoleAsync("Admin")).FirstOrDefault();
+        ViewBag.AdminId = admin?.Id;
+        ViewBag.SelfId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+        ViewBag.SelfName = User.Identity.Name;
+
+        // Lấy lịch sử chat riêng
+        var userId = ViewBag.SelfId as string;
+        var adminId = ViewBag.AdminId as string;
+        var messages = await _context.ChatMessages
+            .Where(m => (m.SenderId == userId && m.ReceiverId == adminId)
+                     || (m.SenderId == adminId && m.ReceiverId == userId))
+            .OrderBy(m => m.SentAt)
+            .ToListAsync();
+        ViewBag.ChatHistory = messages;
+        return View();
+    }
+
 }

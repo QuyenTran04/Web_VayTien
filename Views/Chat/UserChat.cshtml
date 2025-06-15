@@ -1,13 +1,27 @@
-﻿@{
+﻿
+@{
     var receiverId = ViewBag.AdminId as string;
     var selfName = ViewBag.SelfName as string;
+    var selfId = ViewBag.SelfId as string;
 }
 <h3>Chat với Admin</h3>
-<div id="chatWindow" style="height:350px;overflow-y:auto;border:1px solid #ccc;padding:10px;margin-bottom:10px"></div>
+<div id="chatWindow" style="height:350px;overflow-y:auto;border:1px solid #ccc;padding:10px;margin-bottom:10px">
+    @if (ViewBag.ChatHistory != null)
+    {
+        foreach (var msg in (IEnumerable<VAYTIEN.Models.ChatMessage>)ViewBag.ChatHistory)
+        {
+            <div>
+                <b>@msg.SenderName:</b> @msg.Message
+                <span style="color:gray;font-size:small;">[@msg.SentAt.ToString("HH:mm dd/MM/yyyy")]</span>
+            </div>
+        }
+    }
+</div>
 <input type="text" id="messageInput" class="form-control mb-2" placeholder="Nhập tin nhắn..." autocomplete="off" />
 <button onclick="sendMessage()" class="btn btn-success">Gửi</button>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/7.0.5/signalr.min.js"></script>
 <script>
+    const receiverId = "@receiverId";
     const connection = new signalR.HubConnectionBuilder().withUrl("/chatHub").build();
 
     connection.on("ReceiveMessage", function (senderId, senderName, message) {
@@ -22,7 +36,7 @@
     function sendMessage() {
         const message = document.getElementById("messageInput").value;
         if (message.trim()) {
-            connection.invoke("SendMessage", "@receiverId", message)
+            connection.invoke("SendMessage", receiverId, message)
                 .catch(err => console.error(err.toString()));
             document.getElementById("messageInput").value = "";
         }
