@@ -5,194 +5,129 @@
     Layout = "~/Views/Shared/_Layout.cshtml";
 }
 
-<!-- Thêm CSS mới cho giao diện -->
-<style>
-    .card-confirm {
-        background: linear-gradient(115deg, #fafdff 80%, #f0f8ff 120%);
-        border-radius: 18px;
-        box-shadow: 0 8px 40px #7bb7f833, 0 2px 16px #a9d4ff26;
-        border: 1px solid #d8eaff;
-        margin-bottom: 32px;
-    }
-
-    .pay-info-title {
-        color: #0d2a4c; /* Màu xanh navy đậm */
-        font-weight: 700;
-        margin-bottom: 1rem;
-    }
-
-    .pay-dl dt {
-        font-weight: 500;
-        color: #5a6a85; /* Màu xám chữ */
-        font-size: 0.95rem;
-        margin-bottom: 0.5rem;
-    }
-
-    .pay-dl dd {
-        color: #0d2a4c;
-        font-size: 1rem;
-        font-weight: 600;
-        margin-bottom: 0.5rem;
-    }
-
-    .total-amount-section dt {
-        font-size: 1.1rem;
-        font-weight: 600;
-    }
-
-    .total-amount-section .pay-money {
-        font-size: 1.75rem !important;
-        color: #d9534f; /* Màu đỏ cho tổng tiền */
-        font-weight: 700;
-    }
-
-    .badge-status-success {
-        background-color: #d1e7dd;
-        color: #0f5132;
-        font-weight: 600;
-    }
-
-    .badge-status-warning {
-        background-color: #fff3cd;
-        color: #664d03;
-        font-weight: 600;
-    }
-
-    .btn-pay {
-        background: linear-gradient(97deg, #0d6efd 15%, #2388ff 85%);
-        color: #fff;
-        border: none;
-        border-radius: 8px;
-        font-weight: 600;
-        font-size: 1.05rem;
-        padding: 10px 24px;
-        box-shadow: 0 4px 15px #0d6efd44;
-        transition: all 0.2s ease-in-out;
-    }
-
-        .btn-pay:hover, .btn-pay:focus {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 25px #0d6efd55;
-            color: #fff;
-        }
-
-    .pay-method-label {
-        font-weight: 600;
-        color: #343a40;
-    }
-
-    .list-group-item.active {
-        background-color: #e7f1ff;
-        border-color: #0d6efd;
-        color: #0d2a4c;
-    }
-</style>
-
-
-<div class="row justify-content-center">
-    <div class="col-lg-8 col-xl-7">
-        <!-- Vùng hiển thị thông báo lỗi -->
+<div class="flex justify-center items-center min-h-screen bg-gradient-to-br from-blue-50 to-blue-100 py-8">
+    <div class="w-full max-w-2xl">
         @if (TempData["Error"] != null)
         {
-            <div class="alert alert-danger">@TempData["Error"]</div>
+            <div class="mb-4 rounded-lg bg-red-100 border border-red-300 px-5 py-3 text-red-800 text-center font-medium animate-pulse">
+                @TempData["Error"]
+            </div>
         }
 
-        <h2 class="pay-info-title mb-4"><i class="bi bi-credit-card-2-front me-2"></i> Xác nhận Thanh toán</h2>
+        <h2 class="flex items-center gap-2 text-2xl font-bold text-blue-900 mb-6">
+            <i class="bi bi-credit-card-2-front"></i>
+            Xác nhận Thanh toán
+        </h2>
 
-        <div class="card card-confirm">
-            <div class="card-body p-4 p-md-5">
-                <dl class="row pay-dl mb-0">
-                    <dt class="col-sm-5 col-md-4">Tên khách hàng</dt>
-                    <dd class="col-sm-7 col-md-8">@Model.TenKhachHang</dd>
-
-                    <dt class="col-sm-5 col-md-4">Hợp đồng số</dt>
-                    <dd class="col-sm-7 col-md-8">#@Model.MaHopDong</dd>
-
-                    <dt class="col-sm-5 col-md-4">Kỳ hạn</dt>
-                    <dd class="col-sm-7 col-md-8">@Model.KyHan</dd>
-
-                    <dt class="col-sm-5 col-md-4">Hạn trả</dt>
-                    <dd class="col-sm-7 col-md-8">@Model.NgayTra.ToString("dd/MM/yyyy")</dd>
-
-                    <dt class="col-sm-5 col-md-4">Trạng thái</dt>
-                    <dd class="col-sm-7 col-md-8">
+        <div class="bg-white rounded-2xl shadow-2xl border border-blue-100 p-6 md:p-10 transition-all duration-200">
+            <dl class="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-2 mb-2 text-blue-900">
+                <div>
+                    <dt class="font-medium text-blue-700">Tên khách hàng</dt>
+                    <dd class="font-semibold">@Model.TenKhachHang</dd>
+                </div>
+                <div>
+                    <dt class="font-medium text-blue-700">Hợp đồng số</dt>
+                    <dd class="font-semibold">#@Model.MaHopDong</dd>
+                </div>
+                <div>
+                    <dt class="font-medium text-blue-700">Kỳ hạn</dt>
+                    <dd class="font-semibold">@Model.KyHan</dd>
+                </div>
+                <div>
+                    <dt class="font-medium text-blue-700">Hạn trả</dt>
+                    <dd class="font-semibold">@Model.NgayTra.ToString("dd/MM/yyyy")</dd>
+                </div>
+                <div class="md:col-span-2">
+                    <dt class="font-medium text-blue-700">Trạng thái</dt>
+                    <dd>
                         @if (Model.TrangThai == "Đã trả")
                         {
-                            <span class="badge badge-status-success"><i class="bi bi-check-circle-fill me-1"></i> Đã thanh toán</span>
+                            <span class="inline-flex items-center gap-1 rounded-lg bg-green-100 px-3 py-1.5 text-green-700 font-semibold">
+                                <i class="bi bi-check-circle-fill"></i> Đã thanh toán
+                            </span>
                         }
                         else
                         {
-                            <span class="badge badge-status-warning"><i class="bi bi-exclamation-triangle-fill me-1"></i> @Model.TrangThai</span>
+                            <span class="inline-flex items-center gap-1 rounded-lg bg-yellow-100 px-3 py-1.5 text-yellow-700 font-semibold animate-pulse">
+                                <i class="bi bi-exclamation-triangle-fill"></i> @Model.TrangThai
+                            </span>
                         }
                     </dd>
-                </dl>
-
-                <hr class="my-4" />
-
-                <dl class="row pay-dl mb-0">
-                    <dt class="col-sm-5 col-md-4">Số tiền (Gốc + Lãi)</dt>
-                    <dd class="col-sm-7 col-md-8">@Model.SoTienPhaiTra.ToString("N0") VNĐ</dd>
-
-                    <!-- HIỂN THỊ THÔNG TIN PHẠT NẾU CÓ -->
-                    @if (Model.TienPhat > 0)
-                    {
-                        <dt class="col-sm-5 col-md-4 text-danger">Số ngày trả trễ</dt>
-                        <dd class="col-sm-7 col-md-8 text-danger">@Model.SoNgayTre ngày</dd>
-
-                        <dt class="col-sm-5 col-md-4 text-danger">Tiền phạt trễ hạn</dt>
-                        <dd class="col-sm-7 col-md-8 text-danger">@Model.TienPhat.ToString("N0") VNĐ</dd>
-                    }
-                </dl>
-
-                <div class="total-amount-section bg-light rounded p-3 mt-3 text-center">
-                    <dt class="text-muted">TỔNG CỘNG THANH TOÁN</dt>
-                    <dd class="pay-money">@((Model.SoTienPhaiTra + Model.TienPhat).ToString("N0")) VNĐ</dd>
                 </div>
+            </dl>
 
+            <hr class="my-6 border-blue-100" />
 
-                @if (Model.TrangThai != "Đã trả")
+            <dl class="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-2 mb-2 text-blue-900">
+                <div>
+                    <dt class="font-medium text-blue-700">Số tiền (Gốc + Lãi)</dt>
+                    <dd class="font-semibold">@Model.SoTienPhaiTra.ToString("N0") VNĐ</dd>
+                </div>
+                @if (ViewBag.TienPhat != null && (decimal)ViewBag.TienPhat > 0)
                 {
-                    <form asp-action="ThucHien" method="post" class="mt-4">
-                        @Html.AntiForgeryToken()
-                        <!-- Các input ẩn để binding đúng với ViewModel -->
-                        <input type="hidden" asp-for="MaHopDong" />
-                        <input type="hidden" asp-for="KyHan" />
-                        <input type="hidden" asp-for="SoTienPhaiTra" />
-                        <input type="hidden" asp-for="TienPhat" />
-
-                        <div class="mb-4">
-                            <label class="form-label pay-method-label mb-2"><i class="bi bi-wallet2 me-2"></i>Chọn phương thức thanh toán:</label>
-                            <div class="list-group">
-                                <label class="list-group-item list-group-item-action d-flex align-items-center" for="momoRadio">
-                                    <input class="form-check-input me-3" type="radio" asp-for="PhuongThuc" value="Momo" id="momoRadio" checked />
-                                    <img src="https://upload.wikimedia.org/wikipedia/vi/f/fe/MoMo_Logo.png" alt="Momo" height="30" class="me-3" />
-                                    Thanh toán qua Ví MoMo
-                                </label>
-                                <label class="list-group-item list-group-item-action d-flex align-items-center" for="vnpayRadio">
-                                    <input class="form-check-input me-3" type="radio" asp-for="PhuongThuc" value="VNPAY" id="vnpayRadio" />
-                                    <img src="https://vnpay.vn/s1/statics/images/logo-vnpay-qr.png" alt="VNPAY" height="30" class="me-3" />
-                                    Thanh toán qua VNPAY-QR
-                                </label>
-                            </div>
-                        </div>
-
-                        <div class="text-center mt-4">
-                            <button type="submit" class="btn btn-pay">
-                                <i class="bi bi-shield-check-fill me-2"></i> Xác nhận & Thanh toán
-                            </button>
-                        </div>
-                    </form>
-                }
-                else
-                {
-                    <div class="alert alert-success text-center mt-4">
-                        <i class="bi bi-check-circle-fill"></i> Khoản vay này đã được thanh toán.
+                    <div>
+                        <dt class="font-medium text-red-600">Số ngày trả trễ</dt>
+                        <dd class="font-semibold text-red-600">@ViewBag.SoNgayTre ngày</dd>
                     </div>
-                    <div class="text-center mt-3">
-                        <a asp-controller="KhachHang" asp-action="ThongTinVay" class="btn btn-secondary">Quay lại Lịch sử vay</a>
+                    <div>
+                        <dt class="font-medium text-red-600">Tiền phạt trễ hạn</dt>
+                        <dd class="font-semibold text-red-600">@((decimal)ViewBag.TienPhat).ToString("N0") VNĐ</dd>
                     </div>
                 }
+            </dl>
+
+            <div class="bg-blue-50 rounded-xl p-4 mt-4 mb-2 flex flex-col items-center">
+                <dt class="text-gray-500 uppercase text-xs font-bold mb-1 tracking-wider">TỔNG CỘNG THANH TOÁN</dt>
+                <dd class="text-3xl font-extrabold text-red-500 tracking-tight drop-shadow-sm">
+                    @{
+                        var tienPhat = (ViewBag.TienPhat != null) ? (decimal)ViewBag.TienPhat : 0;
+                        var tongCong = Model.SoTienPhaiTra + tienPhat;
+                    }
+                    @tongCong.ToString("N0") VNĐ
+                </dd>
             </div>
+
+            @if (Model.TrangThai != "Đã trả")
+            {
+                <form asp-action="ThucHien" method="post" class="mt-6 space-y-4">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" asp-for="MaHopDong" />
+                    <input type="hidden" asp-for="KyHan" />
+                    <input type="hidden" asp-for="SoTienPhaiTra" />
+                    <input type="hidden" name="TienPhat" value="@(ViewBag.TienPhat ?? 0)" />
+
+                    <label class="block font-semibold text-gray-700 mb-2"><i class="bi bi-wallet2 mr-2"></i>Chọn phương thức thanh toán:</label>
+                    <div class="flex flex-col sm:flex-row gap-3">
+                        <label class="flex items-center cursor-pointer w-full sm:w-auto px-5 py-3 border rounded-xl shadow transition hover:border-blue-400 hover:bg-blue-50">
+                            <input class="form-radio accent-blue-600 mr-3" type="radio" asp-for="PhuongThuc" value="Momo" checked />
+                            <img src="https://upload.wikimedia.org/wikipedia/vi/f/fe/MoMo_Logo.png" alt="Momo" class="h-7 w-7 mr-3" />
+                            <span class="font-semibold text-blue-800">Ví MoMo</span>
+                        </label>
+                        <label class="flex items-center cursor-pointer w-full sm:w-auto px-5 py-3 border rounded-xl shadow transition hover:border-blue-400 hover:bg-blue-50">
+                            <input class="form-radio accent-blue-600 mr-3" type="radio" asp-for="PhuongThuc" value="VNPAY" />
+                            <img src="https://vnpay.vn/s1/statics/images/logo-vnpay-qr.png" alt="VNPAY" class="h-7 w-7 mr-3" />
+                            <span class="font-semibold text-blue-800">VNPAY-QR</span>
+                        </label>
+                    </div>
+
+                    <div class="flex justify-center mt-6">
+                        <button type="submit" class="px-8 py-3 rounded-xl font-bold bg-gradient-to-tr from-blue-600 to-blue-400 shadow-xl text-white hover:from-blue-700 hover:to-blue-500 focus:outline-none transition-all duration-150 text-lg tracking-wider flex items-center gap-2">
+                            <i class="bi bi-shield-check-fill"></i> Xác nhận & Thanh toán
+                        </button>
+                    </div>
+                </form>
+            }
+            else
+            {
+                <div class="alert alert-success text-center mt-4 flex flex-col items-center">
+                    <i class="bi bi-check-circle-fill text-3xl text-green-500"></i>
+                    <span class="font-bold text-green-700 mt-2">Khoản vay này đã được thanh toán.</span>
+                </div>
+                <div class="text-center mt-4">
+                    <a asp-controller="KhachHang" asp-action="ThongTinVay"
+                       class="inline-block px-8 py-3 rounded-xl font-semibold bg-gray-200 text-gray-800 hover:bg-gray-300 shadow-md transition">Quay lại Lịch sử vay</a>
+                </div>
+            }
         </div>
     </div>
 </div>

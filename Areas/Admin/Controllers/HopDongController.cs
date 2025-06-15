@@ -162,7 +162,7 @@ namespace VAYTIEN.Areas.Admin.Controllers
         }
 
         [HttpPost]
-[ValidateAntiForgeryToken]
+        [ValidateAntiForgeryToken]
         public async Task<IActionResult> TuChoi(int id, string lyDo) // Nhận thêm tham số "lyDo" từ form trong Modal
         {
             // Lấy thông tin hợp đồng, phải Include() cả KhachHang để có Email và Tên

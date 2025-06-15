@@ -1,4 +1,4 @@
-﻿namespace VAYTIEN.Models
+namespace VAYTIEN.Models
 {
     /// <summary>
     /// ViewModel dùng riêng cho Form đăng ký vay ở Bước 2.
